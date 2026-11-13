@@ -36,6 +36,8 @@ public final class AgentEngine {
     public static final class Parsed {
         String clean = "";
         ArrayList<JSONObject> calls = new ArrayList<JSONObject>();
+        boolean invalid;
+        String error = "";
     }
 
     private final Context ctx;
@@ -127,6 +129,17 @@ public final class AgentEngine {
         final Parsed parsed = parse(raw);
         if (parsed.clean.length() > 0) lastClean = parsed.clean;
         if (parsed.calls.isEmpty()) {
+            if (parsed.invalid && index < maxRounds) {
+                // 模型写了 <tool> 但 JSON 不合法：不要把它当最终回答，把错误回灌让它修正。
+                cb.onLog("工具块格式错误，正在让模型修正：" + parsed.error);
+                Message bad = new Message(Message.ROLE_USER,
+                        "[系统提示] 你上一轮的 <tool> 块不是合法 JSON，未执行。" + parsed.error
+                                + "\n请只输出合法格式：<tool>{\"tool\":\"...\",...}</tool>，"
+                                + "或直接给最终回答。");
+                work.add(bad);
+                round(index + 1);
+                return;
+            }
             cb.onFinal(lastClean.length() == 0 ? "任务已完成。" : lastClean, lastReasoning, artifacts);
             return;
         }
@@ -192,38 +205,99 @@ public final class AgentEngine {
         return s;
     }
 
-    /** 抽取所有 <tool> 块，剩下的文本才是给用户看的。 */
+    /** 抽取所有 <tool> 块，剩下的文本才是给用户看的。兼容未闭合、数组、代码围栏。 */
     public static Parsed parse(String raw) {
         Parsed p = new Parsed();
         if (raw == null) return p;
         StringBuilder clean = new StringBuilder();
         int from = 0;
-        while (true) {
-            int start = raw.indexOf("<tool>", from);
+        while (from < raw.length()) {
+            int start = findToolOpen(raw, from);
             if (start < 0) {
                 clean.append(raw.substring(from));
                 break;
             }
             clean.append(raw.substring(from, start));
-            int end = raw.indexOf("</tool>", start);
-            if (end < 0) {
-                clean.append(raw.substring(start));
+            int bodyStart = raw.indexOf('>', start);
+            if (bodyStart < 0) {
+                p.invalid = true;
+                p.error = " <tool> 标签未闭合";
                 break;
             }
-            String body = raw.substring(start + 6, end).trim();
-            try {
-                String json = body;
-                if (json.startsWith("```")) {
-                    int nl = json.indexOf('\n');
-                    if (nl >= 0) json = json.substring(nl + 1);
-                }
-                if (json.endsWith("```")) json = json.substring(0, json.length() - 3);
-                p.calls.add(new JSONObject(json.trim()));
-            } catch (Throwable ignored) {
+            String closeTag = raw.startsWith("<tool_call>", start) ? "</tool_call>" : "</tool>";
+            int end = raw.indexOf(closeTag, bodyStart + 1);
+            String body;
+            if (end < 0) {
+                // 流式模型经常漏掉闭合标签：把剩余内容当工具体，避免把标签当最终回答。
+                body = raw.substring(bodyStart + 1);
+                from = raw.length();
+                p.invalid = false;
+            } else {
+                body = raw.substring(bodyStart + 1, end);
+                from = end + closeTag.length();
             }
-            from = end + 7;
+            String trimmed = stripFence(body);
+            int added = 0;
+            try {
+                JSONObject one = new JSONObject(trimmed);
+                p.calls.add(one);
+                added = 1;
+            } catch (Throwable ignored) {
+                try {
+                    org.json.JSONArray arr = new org.json.JSONArray(trimmed);
+                    for (int i = 0; i < arr.length(); i++) {
+                        Object o = arr.opt(i);
+                        if (o instanceof JSONObject) {
+                            p.calls.add((JSONObject) o);
+                            added++;
+                        }
+                    }
+                } catch (Throwable ignored2) {
+                }
+            }
+            if (added == 0) {
+                // 尝试从任意位置截取第一个 JSON 对象，兼容“说明文字 + JSON”。
+                int ob = trimmed.indexOf('{');
+                int cb = trimmed.lastIndexOf('}');
+                if (ob >= 0 && cb > ob) {
+                    try {
+                        p.calls.add(new JSONObject(trimmed.substring(ob, cb + 1)));
+                        added = 1;
+                    } catch (Throwable ignored3) {
+                    }
+                }
+            }
+            if (added == 0) {
+                p.invalid = true;
+                p.error = "工具块不是合法 JSON：" + clip(trimmed);
+            }
+            if (end < 0) break;
         }
         p.clean = clean.toString().trim();
         return p;
+    }
+
+    private static int findToolOpen(String raw, int from) {
+        int a = raw.indexOf("<tool>", from);
+        int b = raw.indexOf("<tool_call>", from);
+        if (a < 0) return b;
+        if (b < 0) return a;
+        return Math.min(a, b);
+    }
+
+    private static String stripFence(String body) {
+        String s = body == null ? "" : body.trim();
+        if (s.startsWith("```")) {
+            int nl = s.indexOf('\n');
+            if (nl >= 0) s = s.substring(nl + 1).trim();
+            if (s.endsWith("```")) s = s.substring(0, s.length() - 3).trim();
+        }
+        return s;
+    }
+
+    private static String clip(String s) {
+        if (s == null) return "";
+        String x = s.replace('\n', ' ');
+        return x.length() > 120 ? x.substring(0, 120) + "…" : x;
     }
 }

@@ -11,7 +11,9 @@
 > - 修复发送时报 `1210 temperature 参数非法：限制小数点[2]位`：温度 / top_p 统一按两位小数写入 JSON；
 > - 重绘「重新生成」矢量图标，箭头方向与圆弧缺口一致；
 > - 三个**默认关闭**的实验性功能（设置或新手引导可开启）：反思、Agent 多轮任务、让 Agent 操控所有文件；
-> - Agent 可创建 / 读取 / 修改 / 删除文件与文件夹，压缩 / 解压 zip，多轮思考，结束后用产物卡片展示；
+> - Agent 可创建 / 读取 / 修改 / 删除文件与文件夹，压缩 / 解压 zip，访问网页（open_url）、下载文件（download_url）、执行 shell（run_command）与受限 Python（run_python），结束时用产物卡片展示；
+> - 新增 Android 系统终端（/system/bin/sh），AI 可调用 run_command 执行开发命令；
+> - 消息长按改为 2 秒，双击消息复制文本；经典 M3 修复设置行重叠、时间与删除按钮重叠、气泡形状和输入框提示；
 > - 任意大小附件导入（流式复制）；HTML 预览支持同目录 CSS/JS；文本 / 代码在线预览；
 > - 全局崩溃错误页（独立进程）：完整日志 + 复制 / 重试 / 返回；
 > - 关于页加入原项目 Muse、本应用开源代码入口与致谢许可证页。
@@ -89,12 +91,12 @@ Muse 使用 **GNU General Public License v3.0**；因此本仓库同样以 **GPL
 
 | 项 | 值 |
 | --- | --- |
-| 包名 / 版本 | `com.chatyue.app` / 3.0 (versionCode 4) |
+| 包名 / 版本 | `com.chatyue.app` / 3.0 (versionCode 5) |
 | minSdkVersion | 3（Android 1.5 Cupcake） |
 | 体积 | 约 2.5 MB（含 8 个 ABI 的 wolfSSL bridge） |
 | DEX | d8 生成，`--min-api 3` |
 | 签名 | v1（JAR, SHA1 摘要）+ v2；Android 1.5–2.3 只认 v1，故必须带 SHA1 |
-| SHA-256 | `6b6faa6ccb3afcdbe26d0747b29872a70fdb23db95a355cb3c3cb70cba6288c6` |
+| SHA-256 | `d8f9bb0c5994e2240eaf64744fc3833925fbd83ea1376e1a9e340085cd74e24c` |
 
 安装时系统会提示“未知来源”，允许即可。签名密钥是仓库内 `keystore/debug.keystore`
 （口令 `android`，仅供调试安装，不要用于正式分发）。
@@ -265,7 +267,7 @@ UI 线程                         工作线程（RequestQueue 单线程串行）
 * **触摸按压反馈**：每个可点组件都有自己的 `pressed` 插值，不依赖 `state_pressed` drawable。
 * **滚动边界回弹**：`BounceScrollView` 在顶部/底部继续下拉时对画布做阻尼位移，松手弹簧归位。
 * **键盘避让**：`windowSoftInputMode=adjustResize` + `ChatPage.onSizeChanged` 自动把视线拉回最新消息。
-* **长按 / 滑动判定**：`Bubble.onInterceptTouchEvent` 用 480ms 定时 + 8dp 位移阈值区分长按与滚动；
+* **长按 / 滑动判定**：`Bubble` / `M3MessageView` 用 2 秒定时 + 5dp 位移阈值区分长按与滚动；双击消息复制文本；
   `CodeBox` / `TableBox` 在横向拖动时 `requestDisallowInterceptTouchEvent(true)`，避免外层滚动抢事件。
 
 ---
@@ -298,7 +300,7 @@ chatUrl() ────┤
 **对话**
 * 多轮上下文（默认带最近 40 条），会话级系统提示词覆盖全局设置
 * 流式逐字输出（40ms 合批）、随时中断、重新生成、失败重试
-* 长按消息：复制 / 重新生成 / 编辑后重发 / 删除
+* 长按消息 2 秒：复制 / 重新生成 / 编辑后重发 / 删除；双击消息复制文本
 * 快捷条：复制 / 重生成 / 导出 Markdown / 清空
 * 思考过程卡片（解析 `reasoning_content`，可折叠）
 
@@ -339,7 +341,8 @@ chatUrl() ────┤
 | 会话 | `SessionListPage` / `SessionDetailPage` | 列表、重命名、导出、清空、删除 |
 | 搜索 | `SearchPage` | 标题 + 正文全局搜索，结果直达原会话 |
 | 看图 | `ImagePreviewPage` | 全屏、可缩放、保存到相册 |
-| 设置 | `SettingsPage` / `M3SettingsPage` | 分组入口，含搜索；经典主题使用独立 M3 设置页 |
+| 设置 | `SettingsPage` / `M3SettingsPage` | 分组入口，含搜索；经典主题使用独立 M3 设置页；含终端入口 |
+| 终端 | `TerminalPage` / `ShellRunner` | Android `/system/bin/sh`，支持命令历史、cd、Python 探测；AI 走 `run_command` |
 | 人设 | `ProfilePage` / `AssistantListPage` / `AssistantEditPage` | 画像、助手增删改、设为默认 |
 | Agent | `AgentPage` | 四项能力开关 + 人设快捷入口 |
 | 资源 | `AssetsPage` | 收藏 / 知识库 / 快捷消息 / 模板 / 技能 / 助手 |

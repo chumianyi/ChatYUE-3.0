@@ -6,11 +6,15 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.File;
+import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -24,7 +28,8 @@ import com.chatyue.app.util.FileUtil;
  * 所有路径都限制在「工作目录」内：
  * - 默认：应用私有 files/workspace
  * - 开启「全部文件」且拿到权限后：外部存储根目录
- * 工具只能读文本、写文本、创建/删除/移动、压缩与解压，不执行任何代码。
+ * 文件工具之外还提供网页访问、文件下载和 Android shell；shell 不是 root，
+ * 且会拦截明显会毁坏设备的命令。
  */
 public final class AgentTools {
 
@@ -38,8 +43,14 @@ public final class AgentTools {
     public static final String TOOL_ZIP = "zip";
     public static final String TOOL_UNZIP = "unzip";
     public static final String TOOL_INFO = "file_info";
+    public static final String TOOL_OPEN_URL = "open_url";
+    public static final String TOOL_DOWNLOAD = "download_url";
+    public static final String TOOL_SHELL = "run_command";
+    public static final String TOOL_PYTHON = "run_python";
 
     private static final long MAX_READ = 400L * 1024L;
+    private static final int MAX_WEB = 300 * 1024;
+    private static final long MAX_DOWNLOAD = 2L * 1024L * 1024L * 1024L;
     private static final long MAX_TOTAL_UNZIP = 200L * 1024L * 1024L;
     private static final int MAX_ZIP_ENTRIES = 20000;
 
@@ -199,6 +210,29 @@ public final class AgentTools {
                 File f = resolve(c, path);
                 out.put("ok", true);
                 out.put("output", describe(c, f));
+            } else if (TOOL_OPEN_URL.equals(tool) || "web_fetch".equals(tool) || "visit_url".equals(tool)) {
+                out.put("ok", true);
+                out.put("output", openUrl(call.optString("url", "")));
+            } else if (TOOL_DOWNLOAD.equals(tool) || "download".equals(tool)) {
+                File file = download(c, call);
+                changed.add(file.getAbsolutePath());
+                out.put("ok", true);
+                out.put("output", "已下载到 " + file.getAbsolutePath() + "（" + sizeText(file.length()) + "）");
+            } else if (TOOL_PYTHON.equals(tool) || "python".equals(tool)) {
+                out.put("ok", true);
+                out.put("output", runPython(c, call));
+            } else if (TOOL_SHELL.equals(tool) || "shell".equals(tool)
+                    || "terminal".equals(tool) || "run_shell".equals(tool)) {
+                String command = call.optString("command", call.optString("cmd", ""));
+                String cwdArg = call.optString("cwd", call.optString("path", ""));
+                File cwd = cwdArg.length() == 0 ? root(c) : resolve(c, cwdArg);
+                int timeout = call.optInt("timeout", ShellRunner.DEFAULT_TIMEOUT);
+                if (timeout < 1000) timeout = 1000;
+                if (timeout > 60000) timeout = 60000;
+                ShellRunner.Result r = ShellRunner.run(c, command, cwd, timeout);
+                out.put("ok", r.ok());
+                out.put("output", "exit=" + r.exit + (r.timeout ? "（超时）" : "")
+                        + "\n" + r.output);
             } else {
                 out.put("ok", false);
                 out.put("output", "未知工具：" + tool);
@@ -211,6 +245,183 @@ public final class AgentTools {
             }
         }
         return out;
+    }
+
+    private static String runPython(Context c, JSONObject call) throws Exception {
+        String python = ShellRunner.pythonPath(c);
+        if (python.length() == 0) {
+            return "未检测到 Python。Android 系统默认不自带 Python；安装 Termux 后，"
+                    + "本应用会自动识别 /data/data/com.termux/files/usr/bin/python3。";
+        }
+        File script;
+        String code = call.optString("code", "");
+        String path = call.optString("path", "");
+        if (path.length() > 0) {
+            script = resolve(c, path);
+        } else {
+            if (code.length() == 0) return "缺少 code 或 path";
+            script = new File(c.getCacheDir(), "chatyue_run.py");
+            FileUtil.writeText(script, code);
+        }
+        int timeout = call.optInt("timeout", 30000);
+        if (timeout < 1000) timeout = 1000;
+        if (timeout > 60000) timeout = 60000;
+        String quoted = "'" + python.replace("'", "'\\''") + "' '" + script.getAbsolutePath().replace("'", "'\\''") + "'";
+        ShellRunner.Result r = ShellRunner.run(c, quoted, root(c), timeout);
+        return "python=" + python + "\nexit=" + r.exit + (r.timeout ? "（超时）" : "") + "\n" + r.output;
+    }
+
+    private static String openUrl(String url) throws Exception {
+        String u = url == null ? "" : url.trim();
+        if (!u.startsWith("http://") && !u.startsWith("https://")) {
+            throw new IOException("只支持 http/https 网页：" + u);
+        }
+        HttpURLConnection conn = null;
+        try {
+            conn = (HttpURLConnection) new URL(u).openConnection();
+            conn.setConnectTimeout(15000);
+            conn.setReadTimeout(20000);
+            conn.setRequestProperty("User-Agent", "ChatYUE/3.0 (Android)");
+            conn.setRequestProperty("Accept", "text/html,text/plain,application/json,*/*");
+            conn.setInstanceFollowRedirects(true);
+            int code = conn.getResponseCode();
+            String type = conn.getContentType();
+            InputStream in = code >= 400 ? conn.getErrorStream() : conn.getInputStream();
+            if (in == null) throw new IOException("HTTP " + code + "，没有响应内容");
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            byte[] buf = new byte[8192];
+            int n;
+            int total = 0;
+            while ((n = in.read(buf)) > 0) {
+                if (total + n > MAX_WEB) {
+                    bos.write(buf, 0, Math.max(0, MAX_WEB - total));
+                    break;
+                }
+                bos.write(buf, 0, n);
+                total += n;
+            }
+            in.close();
+            String text = new String(bos.toByteArray(), "UTF-8");
+            boolean html = type != null && type.toLowerCase().indexOf("html") >= 0;
+            if (html) text = htmlToText(text);
+            if (text.length() > MAX_WEB) text = text.substring(0, MAX_WEB);
+            return "HTTP " + code + (type == null ? "" : " · " + type)
+                    + "\nURL: " + u + "\n\n" + text;
+        } finally {
+            if (conn != null) conn.disconnect();
+        }
+    }
+
+    private static File download(Context c, JSONObject call) throws Exception {
+        String url = call.optString("url", "").trim();
+        if (!url.startsWith("http://") && !url.startsWith("https://")) {
+            throw new IOException("只支持 http/https 下载：" + url);
+        }
+        String pathArg = call.optString("path", call.optString("output", "")).trim();
+        String nameArg = call.optString("filename", "").trim();
+        HttpURLConnection conn = null;
+        try {
+            conn = (HttpURLConnection) new URL(url).openConnection();
+            conn.setConnectTimeout(15000);
+            conn.setReadTimeout(30000);
+            conn.setRequestProperty("User-Agent", "ChatYUE/3.0 (Android)");
+            conn.setInstanceFollowRedirects(true);
+            int code = conn.getResponseCode();
+            if (code >= 400) throw new IOException("HTTP " + code);
+            String mime = conn.getContentType();
+            String disposition = conn.getHeaderField("Content-Disposition");
+            String name = nameArg.length() > 0 ? nameArg : fileNameFromUrl(url, disposition);
+            name = Attachments.sanitize(name);
+            if (name.indexOf('.') < 0) name = name + extForMime(mime);
+
+            File target;
+            if (pathArg.length() > 0) {
+                File p = resolve(c, pathArg);
+                if (p.isDirectory() || pathArg.endsWith("/")) {
+                    target = Attachments.unique(p, name);
+                } else {
+                    target = p;
+                }
+            } else {
+                target = Attachments.unique(Attachments.dir(c), name);
+            }
+            FileUtil.mkdirs(target.getParentFile());
+            InputStream in = conn.getInputStream();
+            FileOutputStream fos = new FileOutputStream(target);
+            try {
+                byte[] buf = new byte[8192];
+                int n;
+                long total = 0;
+                while ((n = in.read(buf)) > 0) {
+                    total += n;
+                    if (total > MAX_DOWNLOAD) {
+                        throw new IOException("文件超过 2 GB，已停止下载");
+                    }
+                    fos.write(buf, 0, n);
+                }
+                fos.flush();
+            } catch (IOException t) {
+                FileUtil.close(fos);
+                FileUtil.delete(target);
+                throw t;
+            } finally {
+                FileUtil.close(in);
+            }
+            return target;
+        } finally {
+            if (conn != null) conn.disconnect();
+        }
+    }
+
+    private static String fileNameFromUrl(String url, String disposition) {
+        String name = "";
+        if (disposition != null) {
+            int i = disposition.toLowerCase().indexOf("filename=");
+            if (i >= 0) {
+                name = disposition.substring(i + 9).trim();
+                if (name.startsWith("\"") && name.endsWith("\"")) {
+                    name = name.substring(1, name.length() - 1);
+                }
+            }
+        }
+        if (name.length() == 0) {
+            try {
+                String path = new URL(url).getPath();
+                name = path.substring(path.lastIndexOf('/') + 1);
+                name = URLDecoder.decode(name, "UTF-8");
+            } catch (Throwable ignored) {
+            }
+        }
+        if (name == null || name.length() == 0) name = "download_" + System.currentTimeMillis();
+        return name;
+    }
+
+    private static String extForMime(String mime) {
+        String m = mime == null ? "" : mime.toLowerCase();
+        if (m.indexOf("jpeg") >= 0) return ".jpg";
+        if (m.indexOf("png") >= 0) return ".png";
+        if (m.indexOf("gif") >= 0) return ".gif";
+        if (m.indexOf("webp") >= 0) return ".webp";
+        if (m.indexOf("pdf") >= 0) return ".pdf";
+        if (m.indexOf("json") >= 0) return ".json";
+        if (m.indexOf("zip") >= 0) return ".zip";
+        if (m.indexOf("html") >= 0) return ".html";
+        if (m.indexOf("text/plain") >= 0) return ".txt";
+        return ".bin";
+    }
+
+    private static String htmlToText(String html) {
+        if (html == null) return "";
+        String s = html;
+        s = s.replaceAll("(?is)<script.*?</script>", " ");
+        s = s.replaceAll("(?is)<style.*?</style>", " ");
+        s = s.replaceAll("(?is)<[^>]+>", " ");
+        s = s.replace("&nbsp;", " ").replace("&amp;", "&")
+                .replace("&lt;", "<").replace("&gt;", ">")
+                .replace("&quot;", "\"").replace("&#39;", "'");
+        s = s.replaceAll("[ \t\r\f]+", " ");
+        s = s.replaceAll("\\n\\s*\\n+", "\\n\\n");
+        return s.trim();
     }
 
     private static String describe(Context c, File f) {
@@ -460,7 +671,8 @@ public final class AgentTools {
         }
         return "你现在处于「Agent 多轮任务」模式。你可以分多轮思考、执行工具、再思考，直到任务完成。\n"
                 + rootDesc + "\n"
-                + "如需调用工具，必须单独输出一行（可连续多行）：\n"
+                + "如需调用工具，必须单独输出一行（可连续多行）；只要出现 <tool> 块，系统会自动执行并把结果回灌，\n"
+                + "你不需要在正文里解释工具调用，也不要在标签未闭合时停下来：\n"
                 + "<tool>{\"tool\":\"write_file\",\"path\":\"index.html\",\"content\":\"...\"}</tool>\n"
                 + "可用工具：\n"
                 + "- list_files：{\"path\":\".\"} 列出目录（最多 3 层）\n"
@@ -473,8 +685,18 @@ public final class AgentTools {
                 + "- zip：{\"paths\":[\"pages\",\"index.html\"],\"output\":\"site.zip\"} 压缩\n"
                 + "- unzip：{\"path\":\"site.zip\",\"output\":\"site\"} 解压（防目录穿越）\n"
                 + "- file_info：{\"path\":\"a.txt\"} 查看大小与时间\n"
-                + "规则：路径一律用相对工作目录的路径；禁止执行代码/命令；不得尝试跳出工作目录；"
+                + "- open_url：{\"url\":\"https://example.com\"} 访问网页并返回正文（HTTP/HTTPS，最多 300 KB）\n"
+                + "- download_url：{\"url\":\"https://example.com/a.zip\",\"filename\":\"a.zip\"} "
+                + "下载文件；不指定路径时自动放进 attachments，下载物会出现在产物卡和附件里\n"
+                + "- run_python：{\"code\":\"print(1+1)\"} 在设备已有 Python/Termux 时执行；没有则明确报错，不要假装运行\n"
+                + "- run_command：{\"command\":\"ls -la\"} 在 Android /system/bin/sh 里执行命令；"
+                + "可传 {\"cwd\":\"...\",\"timeout\":15000}，默认 15 秒、输出最多 64 KB\n"
+                + "规则：路径一律用相对工作目录的路径；不得尝试跳出工作目录；"
+                + "命令执行不要用 root，不要执行 rm -rf /、mkfs、dd、reboot 等毁坏系统的命令；"
+                + "Python 不是 Android 系统必带组件，需要先 run_command 执行 command -v python3 探测，"
+                + "有 Termux 时通常可用 /data/data/com.termux/files/usr/bin/python3；"
                 + "写 HTML 时把 CSS/JS 写成同目录文件并用相对路径引用，这样预览时能完整加载；"
+                + "工具失败也可以继续换方法，不要编造结果；"
                 + "任务完成后不要再输出工具块，直接用自然语言给出简短总结和产物说明。\n";
     }
 }

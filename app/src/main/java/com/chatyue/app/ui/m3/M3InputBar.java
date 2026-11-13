@@ -16,6 +16,7 @@ import android.widget.EditText;
 import com.chatyue.app.core.Icons;
 import com.chatyue.app.core.Ui;
 import com.chatyue.app.ui.widget.IconButton;
+import com.chatyue.app.ui.widget.Label;
 
 /**
  * M3 输入条：浅色圆角容器 + 左侧加号 + 右侧圆形发送键。
@@ -34,6 +35,7 @@ public class M3InputBar extends ViewGroup implements TextWatcher {
     public final EditText edit;
     public final IconButton plus;
     public final IconButton send;
+    private final Label hintLabel;
     private Listener listener;
     private boolean streaming;
     private boolean hasAttachment;
@@ -56,7 +58,9 @@ public class M3InputBar extends ViewGroup implements TextWatcher {
         edit.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f);
         edit.setTextColor(M3.ON_SURFACE);
         edit.setHintTextColor(M3.ON_SURFACE_3);
-        edit.setHint("发消息…");
+        // 不用 EditText 自带 hint：它一聚焦就被系统清掉。改用独立浮层，
+        // 键盘弹出、光标出现时提示仍然在，直到真正输入第一个字才隐藏。
+        edit.setHint("");
         edit.setSingleLine(false);
         edit.setMaxLines(5);
         edit.setMinLines(1);
@@ -88,6 +92,11 @@ public class M3InputBar extends ViewGroup implements TextWatcher {
         });
         addView(edit);
 
+        hintLabel = new Label(c, "发消息…", 15f, M3.ON_SURFACE_3, false);
+        hintLabel.setClickable(false);
+        hintLabel.setFocusable(false);
+        addView(hintLabel);
+
         plus = new IconButton(c, Icons.PLUS, 0, M3.ON_SURFACE_2, 36, 18);
         plus.setOnClickListener(new OnClickListener() {
             public void onClick(android.view.View v) {
@@ -106,6 +115,7 @@ public class M3InputBar extends ViewGroup implements TextWatcher {
         });
         addView(send);
         refreshSend(false);
+        syncHint();
     }
 
     private void doSend() {
@@ -136,7 +146,14 @@ public class M3InputBar extends ViewGroup implements TextWatcher {
     }
 
     public void setHint(String h) {
-        edit.setHint(h);
+        hintLabel.setText(h == null ? "" : h);
+        syncHint();
+    }
+
+    private void syncHint() {
+        if (hintLabel == null) return;
+        hintLabel.setVisibility(edit.getText().length() == 0 ? VISIBLE : GONE);
+        requestLayout();
     }
 
     public EditText field() {
@@ -216,6 +233,8 @@ public class M3InputBar extends ViewGroup implements TextWatcher {
         int editW = w - Ui.dp(16) * 2 - Ui.dp(36) - Ui.dp(40) - Ui.dp(10) * 2;
         edit.measure(MeasureSpec.makeMeasureSpec(Math.max(Ui.dp(40), editW), MeasureSpec.AT_MOST),
                 MeasureSpec.makeMeasureSpec(Ui.dp(110), MeasureSpec.AT_MOST));
+        hintLabel.measure(MeasureSpec.makeMeasureSpec(Math.max(Ui.dp(40), editW), MeasureSpec.AT_MOST),
+                MeasureSpec.makeMeasureSpec(Ui.dp(48), MeasureSpec.AT_MOST));
         int h = Math.max(Ui.dp(56), edit.getMeasuredHeight() + Ui.dp(18));
         setMeasuredDimension(w, h);
     }
@@ -236,19 +255,24 @@ public class M3InputBar extends ViewGroup implements TextWatcher {
         int eh = edit.getMeasuredHeight();
         int et = (h - eh) / 2;
         edit.layout(editLeft, et, editRight, et + eh);
+        int hh = hintLabel.getMeasuredHeight();
+        hintLabel.layout(editLeft + Ui.dp(3), (h - hh) / 2,
+                editRight, (h - hh) / 2 + hh);
     }
 
     @Override
     protected void onDraw(Canvas canvas) {
         rect.set(0, 0, getWidth(), getHeight());
         bgPaint.setColor(Ui.mix(M3.SURFACE_LOW, M3.SURFACE, focus * 0.6f));
-        canvas.drawRoundRect(rect, Ui.dpf(28), Ui.dpf(28), bgPaint);
+        // 上平、下平、左右半圆：高度变化时也保持胶囊形，而不是方角。
+        float radius = getHeight() / 2f;
+        canvas.drawRoundRect(rect, radius, radius, bgPaint);
         strokePaint.setStyle(Paint.Style.STROKE);
         strokePaint.setStrokeWidth(Ui.dpf(1));
         strokePaint.setColor(Ui.mix(M3.OUTLINE_VARIANT, M3.PRIMARY, focus));
         canvas.drawRoundRect(new RectF(Ui.dpf(0.5f), Ui.dpf(0.5f),
                 getWidth() - Ui.dpf(0.5f), getHeight() - Ui.dpf(0.5f)),
-                Ui.dpf(28), Ui.dpf(28), strokePaint);
+                radius, radius, strokePaint);
         // 发送键底部的极淡状态层，跟随可用性呼吸
         super.onDraw(canvas);
     }
@@ -261,6 +285,7 @@ public class M3InputBar extends ViewGroup implements TextWatcher {
 
     public void afterTextChanged(Editable s) {
         refreshSend(true);
+        syncHint();
         requestLayout();
     }
 }

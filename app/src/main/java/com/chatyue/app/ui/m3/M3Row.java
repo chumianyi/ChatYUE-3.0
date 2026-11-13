@@ -169,33 +169,45 @@ public class M3Row extends ViewGroup {
             Icons.draw(canvas, icon, iconCx, iconCy, Ui.dpf(20), iconFg, 1.7f);
         }
 
-        int textX = leadingTextX();
-        int rightLimit = getWidth() - Ui.dp(18);
-        if (trailing != null) rightLimit = getWidth() - Ui.dp(18) - trailing.getMeasuredWidth() - Ui.dp(8);
-        else if (chevron || checked) rightLimit = getWidth() - Ui.dp(40);
-        if (value.length() > 0) rightLimit -= (int) valuePaint.measureText(value) + Ui.dp(10);
+        int right = getWidth() - Ui.dp(18);
+        int trailingW = trailing == null ? 0 : trailing.getMeasuredWidth();
+        int contentRight = right - (trailing == null ? 0 : trailingW + Ui.dp(8));
+        float arrowCx = right - Ui.dpf(10);
+        if (chevron || checked) {
+            contentRight -= Ui.dp(24);
+            if (trailing != null) arrowCx = contentRight + Ui.dpf(12);
+        }
+        int valueRight = contentRight;
+        int textRight = contentRight;
+        int valueW = 0;
+        if (value.length() > 0) {
+            valueW = (int) valuePaint.measureText(value);
+            textRight -= valueW + Ui.dp(10);
+        }
 
+        int textX = leadingTextX();
         int ty;
         if (desc.length() > 0) {
             ty = Ui.dp(22);
-            canvas.drawText(Ui.ellipsize(titlePaint, title, rightLimit - textX), textX,
+            canvas.drawText(Ui.ellipsize(titlePaint, title, textRight - textX), textX,
                     Ui.baselineCentered(titlePaint, ty), titlePaint);
-            canvas.drawText(Ui.ellipsize(descPaint, desc, rightLimit - textX), textX,
+            canvas.drawText(Ui.ellipsize(descPaint, desc, textRight - textX), textX,
                     Ui.baselineCentered(descPaint, Ui.dpf(48)), descPaint);
         } else {
             ty = getHeight() / 2;
-            canvas.drawText(Ui.ellipsize(titlePaint, title, rightLimit - textX), textX,
+            canvas.drawText(Ui.ellipsize(titlePaint, title, textRight - textX), textX,
                     Ui.baselineCentered(titlePaint, ty), titlePaint);
         }
 
-        int right = getWidth() - Ui.dp(18);
         if (value.length() > 0) {
-            canvas.drawText(value, right - valuePaint.measureText(value), Ui.baselineCentered(valuePaint, getHeight() / 2f), valuePaint);
+            // 时间/状态文字永远排在删除按钮左边，绝不压在 trailing 上。
+            canvas.drawText(value, valueRight - valueW,
+                    Ui.baselineCentered(valuePaint, getHeight() / 2f), valuePaint);
         }
         if (checked) {
-            Icons.draw(canvas, Icons.CHECK, right - Ui.dpf(9), getHeight() / 2f, Ui.dpf(19), M3.PRIMARY, 1.8f);
+            Icons.draw(canvas, Icons.CHECK, arrowCx, getHeight() / 2f, Ui.dpf(19), M3.PRIMARY, 1.8f);
         } else if (chevron) {
-            Icons.draw(canvas, Icons.CHEVRON_RIGHT, right - Ui.dpf(6), getHeight() / 2f, Ui.dpf(18), M3.ON_SURFACE_3, 1.6f);
+            Icons.draw(canvas, Icons.CHEVRON_RIGHT, arrowCx, getHeight() / 2f, Ui.dpf(18), M3.ON_SURFACE_3, 1.6f);
         }
 
         if (divider) {

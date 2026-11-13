@@ -138,16 +138,19 @@ public class M3FavoritePage extends Page {
             LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(Ui.dp(30), Ui.dp(30));
             slp.leftMargin = Ui.dp(4);
             top.addView(star, slp);
-            card.addView(top, new FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.FILL_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
-
             MdText text = new MdText(act, com.chatyue.app.md.MdInline.build(e.message.text,
                     M3.ON_SURFACE, M3.PRIMARY_DEEP), Ui.textPaint(M3.ON_SURFACE, 13.8f, false),
                     0, 0, 4f);
+            LinearLayout bodyCol = new LinearLayout(act);
+            bodyCol.setOrientation(LinearLayout.VERTICAL);
+            bodyCol.addView(top, new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.FILL_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
             LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.FILL_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
             tlp.topMargin = Ui.dp(9);
-            card.addView(text, tlp);
+            bodyCol.addView(text, tlp);
+            card.addView(bodyCol, new FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.FILL_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
 
             card.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {

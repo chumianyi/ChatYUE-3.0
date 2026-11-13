@@ -53,7 +53,8 @@ public class ExperimentalPage extends BasePage {
                     }
                 });
         note("开启后，对话会自动进入 Agent 模式：模型可以列出/读取/创建/修改/删除文件，"
-                + "创建文件夹，压缩与解压 zip，写完 HTML 还能直接预览。它不能执行任何代码或命令。");
+                + "创建文件夹，压缩与解压 zip，访问网页、下载文件，写完 HTML 还能直接预览。"
+                + "在终端模式下还可以执行 Android shell 命令（非 root）。");
 
         section("全部文件");
         if (!Experiment.supportsAllFiles()) {
@@ -103,14 +104,28 @@ public class ExperimentalPage extends BasePage {
         card.addRow(open);
 
         MenuRow tools = new MenuRow(act, MenuRow.STYLE_CARD);
-        tools.position(false, true);
+        tools.position(false, false);
         tools.divider(false);
         tools.icon(Icons.CODE, Palette.PINK_SOFT, Palette.PINK_DEEP);
         tools.title("Agent 可用工具");
-        tools.desc("list_files · read_file · write_file · append_file · delete_file · "
-                + "make_dir · move_file · zip · unzip · file_info");
+        tools.desc("文件读写 / 压缩解压 / open_url 网页 / download_url 下载 / "
+                + "run_command（Android /system/bin/sh）");
         tools.chevron(false);
         card.addRow(tools);
+
+        MenuRow terminal = new MenuRow(act, MenuRow.STYLE_CARD);
+        terminal.position(false, true);
+        terminal.divider(false);
+        terminal.icon(Icons.TERMINAL, Palette.PINK_SOFT, Palette.PINK_DEEP);
+        terminal.title("打开终端");
+        terminal.desc("Android 系统 shell；AI 在 Agent 模式下也能执行 run_command");
+        terminal.chevron(true);
+        terminal.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                act.openTerminal();
+            }
+        });
+        card.addRow(terminal);
 
         primaryButton("清空工作目录", new View.OnClickListener() {
             public void onClick(View v) {
@@ -134,7 +149,7 @@ public class ExperimentalPage extends BasePage {
     private void confirmAgent() {
         Dialog.confirm(act.root().overlay, "开启 Agent 多轮任务？",
                 "模型会自己决定何时创建、修改或删除工作目录里的文件，并且可能要跑好几轮。"
-                        + "它不能执行代码，也不能越过工作目录。",
+                        + "它可以通过终端执行 shell 命令（非 root），但不能越过工作目录乱删系统文件。",
                 "开启", new Runnable() {
                     public void run() {
                         Prefs.setAgentEnabled(act, true);

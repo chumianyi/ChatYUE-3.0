@@ -91,8 +91,12 @@ public class M3SettingsPage extends Page {
         M3Card pref = new M3Card(act);
         pref.setRadius(26);
         pref.pad(0, 3, 0, 3);
-        buildPrefRows(pref);
+        LinearLayout prefCol = new LinearLayout(act);
+        prefCol.setOrientation(LinearLayout.VERTICAL);
+        buildPrefRows(prefCol);
         if (rowCount > 0) {
+            pref.addView(prefCol, new FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.FILL_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
             body.addView(section("偏好", true));
             body.addView(pref, lp(0, 0, 0, 0));
         }
@@ -100,8 +104,12 @@ public class M3SettingsPage extends Page {
         M3Card about = new M3Card(act);
         about.setRadius(26);
         about.pad(0, 3, 0, 3);
-        buildAboutRows(about);
+        LinearLayout aboutCol = new LinearLayout(act);
+        aboutCol.setOrientation(LinearLayout.VERTICAL);
+        buildAboutRows(aboutCol);
         if (rowCount2 > 0) {
+            about.addView(aboutCol, new FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.FILL_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
             body.addView(section("关于", true));
             body.addView(about, lp(0, 0, 0, 0));
         }
@@ -173,7 +181,7 @@ public class M3SettingsPage extends Page {
     private int rowCount;
     private int rowCount2;
 
-    private void addRow(M3Card card, int icon, String title, String desc, String value,
+    private void addRow(LinearLayout card, int icon, String title, String desc, String value,
                         final Runnable action) {
         if (filter.length() > 0) {
             String hay = (title + " " + desc).toLowerCase();
@@ -188,12 +196,12 @@ public class M3SettingsPage extends Page {
                 action.run();
             }
         });
-        card.addView(row, new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.FILL_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        card.addView(row, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.FILL_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
         rowCount++;
     }
 
-    private void buildPrefRows(M3Card card) {
+    private void buildPrefRows(LinearLayout card) {
         rowCount = 0;
         addRow(card, Icons.PALETTE, "外观", "主题 · 字号 · 实时预览",
                 Theme.name(Prefs.theme(act)), new Runnable() {
@@ -226,6 +234,12 @@ public class M3SettingsPage extends Page {
                         act.push(new M3KnowledgePage(act));
                     }
                 });
+        addRow(card, Icons.TERMINAL, "终端", "Android 系统 shell · 开发命令 · Python",
+                "打开", new Runnable() {
+                    public void run() {
+                        act.openTerminal();
+                    }
+                });
         addRow(card, Icons.DOC, "数据与缓存", "会话 · 图片 · 清空", SessionStore.list(act).size() + " 段",
                 new Runnable() {
                     public void run() {
@@ -234,7 +248,7 @@ public class M3SettingsPage extends Page {
                 });
     }
 
-    private void buildAboutRows(M3Card card) {
+    private void buildAboutRows(LinearLayout card) {
         rowCount2 = 0;
         addRow2(card, Icons.SPARKLE, "实验室", "反思 · 多轮 Agent · 全部文件",
                 Prefs.agentEnabled(act) ? "已开启" : "默认关闭", new Runnable() {
@@ -259,7 +273,7 @@ public class M3SettingsPage extends Page {
         });
     }
 
-    private void addRow2(M3Card card, int icon, String title, String desc, String value,
+    private void addRow2(LinearLayout card, int icon, String title, String desc, String value,
                          final Runnable action) {
         if (filter.length() > 0) {
             String hay = (title + " " + desc).toLowerCase();
@@ -274,8 +288,8 @@ public class M3SettingsPage extends Page {
                 action.run();
             }
         });
-        card.addView(row, new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.FILL_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        card.addView(row, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.FILL_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
         rowCount2++;
     }
 

@@ -142,6 +142,8 @@ public class SettingsPage extends Page {
                 + (Prefs.allFilesEnabled(act) ? 1 : 0);
         items.add(row("lab", Icons.SPARKLE, "实验室", "反思 · 多轮任务 · 全部文件",
                 lab + " 项开启"));
+        items.add(row("terminal", Icons.TERMINAL, "终端", "Android 系统 shell · shell / Python 探测",
+                ""));
         Item assets = row("assets", Icons.STAR, "助手资源", "收藏 / 知识库 / 模板 / 技能 / 助手", "");
         assets.last = true;
         items.add(assets);
@@ -208,6 +210,7 @@ public class SettingsPage extends Page {
         all.add(row("assistant", Icons.SPARKLE, "助手", "管理助手、模型、角色设定与世界书", ""));
         all.add(row("agent", Icons.ROBOT, "Agent", "助手选择 / 协作 / 主动消息", ""));
         all.add(row("lab", Icons.SPARKLE, "实验室", "反思 / 多轮任务 / 全部文件", ""));
+        all.add(row("terminal", Icons.TERMINAL, "终端", "Android 系统 shell / 开发命令 / Python", ""));
         all.add(row("assets", Icons.STAR, "助手资源", "收藏夹 / 世界书 / 快捷消息 / 技能", ""));
         all.add(row("chat", Icons.LIST, "聊天", "字体大小 · 记忆 · 流式输出", ""));
         all.add(row("look", Icons.BRUSH, "外观", "浅色主题 · 圆角 · 自绘控件", ""));
@@ -274,6 +277,8 @@ public class SettingsPage extends Page {
             act.push(new AgentPage(act));
         } else if ("lab".equals(id)) {
             act.push(new ExperimentalPage(act));
+        } else if ("terminal".equals(id)) {
+            act.openTerminal();
         } else if ("assets".equals(id)) {
             act.push(new AssetsPage(act));
         } else if ("chat".equals(id)) {

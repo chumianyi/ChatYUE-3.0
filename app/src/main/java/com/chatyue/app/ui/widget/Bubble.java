@@ -6,6 +6,7 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RectF;
 import android.text.TextPaint;
+import android.os.SystemClock;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -30,6 +31,8 @@ public class Bubble extends ViewGroup {
 
     public interface Listener {
         void onLongPress(Message m);
+
+        void onDoubleTap(Message m);
 
         void onCopyCode(String code);
 
@@ -79,6 +82,9 @@ public class Bubble extends ViewGroup {
     private float downY;
     private boolean moved;
     private boolean longFired;
+    private long lastTapAt;
+    private float lastTapX;
+    private float lastTapY;
 
     private final Runnable longPress = new Runnable() {
         public void run() {
@@ -403,10 +409,11 @@ public class Bubble extends ViewGroup {
 
     @Override
     protected void onDraw(Canvas canvas) {
-        float tl = msg.isUser() ? 18 : 6;
-        float tr = 18;
-        float br = msg.isUser() ? 6 : 18;
-        float bl = 18;
+        // 用户气泡改成真正的胶囊形：上下边平、左右两端椭圆，不再留方角。
+        float tl = msg.isUser() ? 24 : 6;
+        float tr = msg.isUser() ? 24 : 18;
+        float br = msg.isUser() ? 24 : 18;
+        float bl = msg.isUser() ? 24 : 18;
         path.reset();
         path.addRoundRect(bubbleRect, new float[]{
                 Ui.dpf(tl), Ui.dpf(tl), Ui.dpf(tr), Ui.dpf(tr),
@@ -438,15 +445,31 @@ public class Bubble extends ViewGroup {
                 moved = false;
                 longFired = false;
                 removeCallbacks(longPress);
-                postDelayed(longPress, 480);
+                postDelayed(longPress, 2000);
                 break;
             case MotionEvent.ACTION_MOVE:
-                if (Math.abs(ev.getX() - downX) > Ui.dpf(8) || Math.abs(ev.getY() - downY) > Ui.dpf(8)) {
+                // 2 秒长按必须足够“稳”：手指稍一滑动就取消，避免滑聊天记录时弹菜单。
+                if (Math.abs(ev.getX() - downX) > Ui.dpf(5) || Math.abs(ev.getY() - downY) > Ui.dpf(5)) {
                     moved = true;
                     removeCallbacks(longPress);
                 }
                 break;
             case MotionEvent.ACTION_UP:
+                removeCallbacks(longPress);
+                if (!moved && !longFired) {
+                    long now = SystemClock.uptimeMillis();
+                    if (lastTapAt > 0 && now - lastTapAt <= 320
+                            && Math.abs(ev.getX() - lastTapX) <= Ui.dpf(7)
+                            && Math.abs(ev.getY() - lastTapY) <= Ui.dpf(7)) {
+                        lastTapAt = 0;
+                        if (listener != null) listener.onDoubleTap(msg);
+                    } else {
+                        lastTapAt = now;
+                        lastTapX = ev.getX();
+                        lastTapY = ev.getY();
+                    }
+                }
+                break;
             case MotionEvent.ACTION_CANCEL:
                 removeCallbacks(longPress);
                 break;

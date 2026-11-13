@@ -134,7 +134,7 @@ public class M3AppearancePage extends Page {
 
         RoundBox bubble = new RoundBox(act);
         bubble.setFill(M3.PRIMARY_CONTAINER);
-        bubble.corners(20, 20, 6, 20);
+        bubble.corners(24, 24, 24, 24);
         bubble.setPadding(Ui.dp(14), Ui.dp(10), Ui.dp(14), Ui.dp(10));
         Label ut = new Label(act, "这个经典主题挺好看。", 14f, M3.ON_PRIMARY_CONTAINER, false);
         bubble.addView(ut);

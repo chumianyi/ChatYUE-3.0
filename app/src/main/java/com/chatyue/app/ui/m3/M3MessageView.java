@@ -3,7 +3,9 @@ package com.chatyue.app.ui.m3;
 import android.content.Context;
 import android.graphics.Paint;
 import android.graphics.RectF;
+import android.os.SystemClock;
 import android.text.TextPaint;
+import android.view.MotionEvent;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.FrameLayout;
@@ -41,6 +43,34 @@ public class M3MessageView extends LinearLayout {
     private MdText userText;
     private RoundBox userBubble;
 
+    public interface GestureListener {
+        void onLongPress(M3MessageView v);
+
+        void onDoubleTap(M3MessageView v);
+    }
+
+    private GestureListener gestureListener;
+    private float downX;
+    private float downY;
+    private boolean moved;
+    private boolean longFired;
+    private long lastTapAt;
+    private float lastTapX;
+    private float lastTapY;
+
+    private final Runnable longPress = new Runnable() {
+        public void run() {
+            if (!moved && !longFired) {
+                longFired = true;
+                if (gestureListener != null) gestureListener.onLongPress(M3MessageView.this);
+            }
+        }
+    };
+
+    public void setGestureListener(GestureListener l) {
+        gestureListener = l;
+    }
+
     public Message getMessage() {
         return msg;
     }
@@ -51,6 +81,46 @@ public class M3MessageView extends LinearLayout {
         setOrientation(VERTICAL);
         if (m.isUser()) buildUser(c);
         else buildAssistant(c);
+    }
+
+    @Override
+    public boolean onInterceptTouchEvent(MotionEvent ev) {
+        switch (ev.getAction() & 0xff) {
+            case MotionEvent.ACTION_DOWN:
+                downX = ev.getX();
+                downY = ev.getY();
+                moved = false;
+                longFired = false;
+                removeCallbacks(longPress);
+                postDelayed(longPress, 2000);
+                break;
+            case MotionEvent.ACTION_MOVE:
+                if (Math.abs(ev.getX() - downX) > Ui.dpf(5) || Math.abs(ev.getY() - downY) > Ui.dpf(5)) {
+                    moved = true;
+                    removeCallbacks(longPress);
+                }
+                break;
+            case MotionEvent.ACTION_UP:
+                removeCallbacks(longPress);
+                if (!moved && !longFired) {
+                    long now = SystemClock.uptimeMillis();
+                    if (lastTapAt > 0 && now - lastTapAt <= 320
+                            && Math.abs(ev.getX() - lastTapX) <= Ui.dpf(7)
+                            && Math.abs(ev.getY() - lastTapY) <= Ui.dpf(7)) {
+                        lastTapAt = 0;
+                        if (gestureListener != null) gestureListener.onDoubleTap(this);
+                    } else {
+                        lastTapAt = now;
+                        lastTapX = ev.getX();
+                        lastTapY = ev.getY();
+                    }
+                }
+                break;
+            case MotionEvent.ACTION_CANCEL:
+                removeCallbacks(longPress);
+                break;
+        }
+        return false;
     }
 
     private void buildUser(Context c) {
@@ -100,7 +170,7 @@ public class M3MessageView extends LinearLayout {
 
         userBubble = new RoundBox(c);
         userBubble.setFill(M3.PRIMARY_CONTAINER);
-        userBubble.corners(22, 22, 6, 22);
+        userBubble.corners(24, 24, 24, 24);
         userBubble.setPadding(Ui.dp(14), Ui.dp(10), Ui.dp(14), Ui.dp(10));
         userText = new MdText(c, MdInline.build(msg.text, M3.ON_PRIMARY_CONTAINER, M3.PRIMARY_DEEP),
                 Ui.textPaint(M3.ON_PRIMARY_CONTAINER, 14.6f, false), 0, 0, 5f);
@@ -208,6 +278,33 @@ public class M3MessageView extends LinearLayout {
         });
         col.addView(body, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.FILL_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+
+        if (!msg.attachments.isEmpty()) {
+            LinearLayout files = new LinearLayout(c);
+            files.setOrientation(LinearLayout.VERTICAL);
+            for (int i = 0; i < msg.attachments.size(); i++) {
+                final java.io.File f = new java.io.File(msg.attachments.get(i));
+                if (!f.exists()) continue;
+                Label chip = new Label(c, AgentTools.sizeText(f.length()) + " · " + f.getName(),
+                        10.8f, M3.ON_SURFACE_2, false);
+                chip.setPadding(Ui.dp(8), Ui.dp(4), Ui.dp(8), Ui.dp(4));
+                chip.setOnClickListener(new OnClickListener() {
+                    public void onClick(View v) {
+                        if (getContext() instanceof com.chatyue.app.MainActivity) {
+                            ((com.chatyue.app.MainActivity) getContext()).openFile(f);
+                        }
+                    }
+                });
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                lp.bottomMargin = UiPhoto.gap(c);
+                files.addView(chip, lp);
+            }
+            if (files.getChildCount() > 0) {
+                col.addView(files, new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.FILL_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+            }
+        }
 
         if (!msg.artifacts.isEmpty()) {
             final com.chatyue.app.MainActivity act =
@@ -319,6 +416,12 @@ public class M3MessageView extends LinearLayout {
         refreshStatus();
         requestLayout();
         invalidate();
+    }
+
+    @Override
+    protected void onDetachedFromWindow() {
+        removeCallbacks(longPress);
+        super.onDetachedFromWindow();
     }
 
     /** 小工具：统一尺寸，避免每个子控件写一遍 dp。 */

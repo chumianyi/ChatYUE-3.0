@@ -8,7 +8,7 @@ android {
         // 关键：最低支持 Android 1.5 Cupcake / API 3
         minSdkVersion 3
         targetSdkVersion 30
-        versionCode 4
+        versionCode 5
         versionName "3.0"
         // 不使用任何第三方依赖，因此没有依赖需要校验 minSdk
     }

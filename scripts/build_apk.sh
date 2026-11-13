@@ -19,7 +19,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUT="$ROOT/build"
 MIN_SDK=3
 TARGET_SDK=30
-VERSION_CODE=4
+VERSION_CODE=5
 VERSION_NAME=3.0
 APK_NAME="ChatYUE-$VERSION_NAME.apk"
 

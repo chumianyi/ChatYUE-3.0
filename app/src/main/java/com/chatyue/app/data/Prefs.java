@@ -218,9 +218,9 @@ public final class Prefs {
     }
 
     public static int agentMaxRounds(Context c) {
-        int n = getInt(c, KEY_AGENT_MAX_ROUNDS, 8);
+        int n = getInt(c, KEY_AGENT_MAX_ROUNDS, 12);
         if (n < 3) n = 3;
-        if (n > 16) n = 16;
+        if (n > 24) n = 24;
         return n;
     }
 

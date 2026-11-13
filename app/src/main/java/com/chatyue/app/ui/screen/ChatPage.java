@@ -407,6 +407,12 @@ public class ChatPage extends Page implements InputBar.Listener, Bubble.Listener
                         act.openWorkspace();
                     }
                 });
+        sheet.addDesc(Icons.TERMINAL, "终端", "Android 系统 shell · AI 可用 run_command",
+                new Runnable() {
+                    public void run() {
+                        act.openTerminal();
+                    }
+                });
         final Provider p = Providers.current(act);
         if (p.isBuiltin()) {
             sheet.addDesc(Icons.WAIT, "思考模式 · 固定开启",
@@ -651,7 +657,19 @@ public class ChatPage extends Page implements InputBar.Listener, Bubble.Listener
                         bot.text = text == null ? "" : text;
                         bot.reasoning = reasoning == null ? "" : reasoning;
                         bot.artifacts.clear();
-                        if (artifacts != null) bot.artifacts.addAll(artifacts);
+                        if (artifacts != null) {
+                            bot.artifacts.addAll(artifacts);
+                            // 下载工具默认写进 attachments：这里把它同步成消息附件，
+                            // 气泡上会出现文件条，用户点一下就能打开。
+                            String attachDir = Attachments.dir(act).getAbsolutePath();
+                            for (int i = 0; i < artifacts.size(); i++) {
+                                String p = artifacts.get(i);
+                                if (p != null && p.startsWith(attachDir + File.separator)
+                                        && !bot.attachments.contains(p)) {
+                                    bot.attachments.add(p);
+                                }
+                            }
+                        }
                         if (bot.artifacts.size() > 0) {
                             appendAgentLog(bot, "任务完成 · 产出 " + bot.artifacts.size() + " 个文件");
                         }
@@ -930,6 +948,16 @@ public class ChatPage extends Page implements InputBar.Listener, Bubble.Listener
             }
         });
         sheet.show(act.root().overlay);
+    }
+
+    public void onDoubleTap(Message m) {
+        String text = m == null || m.text == null ? "" : m.text;
+        if (text.length() == 0) {
+            act.toast("这条没有可复制的文本");
+            return;
+        }
+        act.copyText(text);
+        act.toast("已复制这条消息");
     }
 
     public void onCopyCode(String code) {
