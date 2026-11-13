@@ -1,0 +1,82 @@
+name: Build wolfSSL Bridge (all ABIs)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  legacy:
+    name: wolfSSL bridge · legacy 7 ABIs
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq autoconf automake libtool unzip curl make
+
+      - name: Download NDK r10e
+        run: |
+          if [ ! -d "$RUNNER_TEMP/android-ndk-r10e" ]; then
+            curl -fL --retry 3 --connect-timeout 20 \
+              -o "$RUNNER_TEMP/ndk-r10e.zip" \
+              https://dl.google.com/android/repository/android-ndk-r10e-linux-x86_64.zip
+            unzip -q "$RUNNER_TEMP/ndk-r10e.zip" -d "$RUNNER_TEMP"
+          fi
+          echo "NDK=$RUNNER_TEMP/android-ndk-r10e" >> "$GITHUB_ENV"
+
+      - name: Build legacy ABIs
+        run: |
+          chmod +x scripts/build_wolfssl_ci.sh
+          bash scripts/build_wolfssl_ci.sh legacy
+
+      - name: Upload legacy artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wolfssl-bridge-legacy
+          path: out/**
+          if-no-files-found: warn
+          retention-days: 7
+
+  riscv:
+    name: wolfSSL bridge · riscv64
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq autoconf automake libtool unzip curl make
+
+      - name: Download NDK r27d
+        run: |
+          if [ ! -d "$RUNNER_TEMP/android-ndk-r27d" ]; then
+            curl -fL --retry 3 --connect-timeout 20 \
+              -o "$RUNNER_TEMP/ndk-r27d.zip" \
+              https://dl.google.com/android/repository/android-ndk-r27d-linux.zip
+            unzip -q "$RUNNER_TEMP/ndk-r27d.zip" -d "$RUNNER_TEMP"
+          fi
+          echo "NDK=$RUNNER_TEMP/android-ndk-r27d" >> "$GITHUB_ENV"
+
+      - name: Build riscv64
+        run: |
+          chmod +x scripts/build_wolfssl_ci.sh
+          bash scripts/build_wolfssl_ci.sh riscv
+
+      - name: Upload riscv artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wolfssl-bridge-riscv64
+          path: out/riscv64/**
+          if-no-files-found: warn
+          retention-days: 7
