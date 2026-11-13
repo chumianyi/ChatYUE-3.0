@@ -1,0 +1,12 @@
+*.iml
+.gradle/
+local.properties
+.idea/
+build/
+captures/
+.externalNativeBuild
+.cxx
+app/src/main/jniLibs/*/*.so
+app/src/main/jni/wolfssl/
+app/src/main/jni/libs/
+app/src/main/jni/obj/

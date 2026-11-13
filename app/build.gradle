@@ -1,0 +1,56 @@
+apply plugin: 'com.android.application'
+
+android {
+    compileSdkVersion 31
+
+    defaultConfig {
+        applicationId "com.chatyue.app"
+        // 关键：最低支持 Android 1.5 Cupcake / API 3
+        minSdkVersion 3
+        targetSdkVersion 30
+        versionCode 4
+        versionName "3.0"
+        // 不使用任何第三方依赖，因此没有依赖需要校验 minSdk
+    }
+
+    compileOptions {
+        // 源码书写严格限定在 Java 1.6 语法内（无 lambda / 无 try-with-resources /
+        // 无字符串 switch / 无接口默认方法 / 无 diamond）。
+        // 这里用 1.7 作为编译目标，是因为现代 JDK 已移除 1.6 的 -source 支持；
+        // 若本机为 JDK 8，可安全改为 JavaVersion.VERSION_1_6。
+        sourceCompatibility JavaVersion.VERSION_1_7
+        targetCompatibility JavaVersion.VERSION_1_7
+    }
+
+    lintOptions {
+        abortOnError false
+        checkReleaseBuilds false
+        // 关闭 minSdk 相关校验：本项目刻意使用极低 minSdk，全部 API 均由手写兼容层兜底
+        disable 'NewApi', 'InlinedApi', 'OldTargetApi', 'UnusedResources'
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    sourceSets {
+        main {
+            // 内置 wolfSSL JNI 兜底库（.so 由 jni/ 下的源码通过 ndk-build 生成）
+            jniLibs.srcDirs = ['src/main/jniLibs']
+        }
+    }
+
+    packagingOptions {
+        // 低版本只认未压缩的 .so，保留传统打包方式
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
+}
+
+dependencies {
+    // 空：禁止 AndroidX / Jetpack / Material / support-v4
+}

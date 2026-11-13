@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- 低版本没有 Material，主题只能基于系统最朴素的 Light.NoTitleBar。
+         状态栏保留，标题栏手绘。NoTitleBar 从 API 1 起就存在。 -->
+    <style name="AppTheme" parent="@android:style/Theme.Light.NoTitleBar">
+        <item name="android:windowBackground">@color/bg</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:colorBackground">@color/bg</item>
+    </style>
+
+</resources>

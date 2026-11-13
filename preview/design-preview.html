@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ChatYUE · 界面预览</title>
+<style>
+  :root{
+    --bg:#F6F3F5; --card:#FFFFFF; --ink:#1C1B1D; --ink2:#6E6B72; --ink3:#9B979F;
+    --pink:#EF7FA8; --pink-deep:#E2658F; --pink-soft:#FBE3EB; --pink-tint:#FDF2F6;
+    --line:#EDE8EC; --input:#EFEAEE;
+  }
+  *{box-sizing:border-box;-webkit-font-smoothing:antialiased}
+  body{
+    margin:0;padding:44px 24px 60px;
+    background:radial-gradient(1200px 600px at 50% -10%,#FDF7FA 0%,#EFE9ED 60%,#E8E2E6 100%);
+    font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,-apple-system,sans-serif;
+    color:var(--ink);
+  }
+  h1{font-size:22px;letter-spacing:-.3px;margin:0 0 6px;text-align:center}
+  .sub{text-align:center;color:var(--ink3);font-size:12.5px;margin-bottom:34px;line-height:1.7}
+  .row{display:flex;gap:26px;justify-content:center;flex-wrap:wrap;align-items:flex-start}
+  .phone{
+    width:352px;height:730px;border-radius:38px;background:var(--bg);position:relative;
+    box-shadow:0 26px 60px rgba(70,40,55,.16), 0 2px 0 rgba(255,255,255,.7) inset, 0 0 0 7px #1d1b1e, 0 0 0 9px #2b282c;
+    overflow:hidden;display:flex;flex-direction:column;
+  }
+  .caption{text-align:center;font-size:11.5px;color:#8b838a;margin-top:14px;letter-spacing:.4px}
+  .status{height:26px;display:flex;align-items:center;justify-content:space-between;
+    padding:0 22px;font-size:10.5px;color:#3c3a3d;font-weight:600;flex:none}
+  .status .dots{display:flex;gap:4px;align-items:center}
+  .status i{display:block;width:3px;height:3px;border-radius:50%;background:#3c3a3d}
+  .page{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative}
+  .scroll{flex:1;overflow:auto;padding:0 20px}
+  .scroll::-webkit-scrollbar{width:0}
+
+  /* 通用 */
+  .circle{width:38px;height:38px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center}
+  .circle.pink{background:var(--pink-soft)}
+  svg{display:block}
+  .seg{display:flex;background:#fff;border-radius:20px;height:40px;padding:3px;gap:2px;flex:none}
+  .seg b{font-weight:500;font-size:12.5px;color:var(--ink2);padding:0 15px;display:flex;align-items:center;border-radius:17px}
+  .seg b.on{background:var(--pink);color:#fff;font-weight:600}
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:6px 20px 4px}
+  .card{background:#fff;border-radius:18px;padding:14px 16px;display:flex;align-items:center;gap:12px;
+    box-shadow:0 6px 18px rgba(60,30,45,.045)}
+  .h{font-size:27px;font-weight:700;letter-spacing:-.6px}
+  .muted{color:var(--ink3);font-size:12.5px}
+  .label{font-size:13.5px;color:var(--ink2)}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--pink);flex:none}
+  .dot.gray{background:#D8D3D7}
+  .title{font-size:15px;font-weight:600}
+  .desc{font-size:12px;color:var(--ink3);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .item>div{min-width:0}
+  .chev{color:#C4C0C5;margin-left:auto}
+
+  /* 首页 */
+  .greet{margin-top:14px}
+  .date{font-size:13px;color:var(--ink3);margin-top:8px}
+  .lead{font-size:14px;color:var(--ink2);margin-top:6px;line-height:1.6}
+  .avatarline{display:flex;align-items:center;gap:18px;margin:20px 0 6px}
+  .ava{display:flex;flex-direction:column;align-items:center;gap:5px}
+  .ava img{width:58px;height:58px;border-radius:50%;box-shadow:0 0 0 3px var(--pink-soft)}
+  .ava span{font-size:11px;color:var(--ink2)}
+  .plus{width:46px;height:46px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 1px var(--line)}
+  .sec{font-size:13.5px;color:var(--ink2);margin:24px 0 10px;display:flex;align-items:center}
+  .sec em{margin-left:auto;font-style:normal;font-size:12px;color:var(--pink-deep)}
+  .dock{position:absolute;left:18px;right:18px;bottom:18px;height:78px;background:#fff;border-radius:30px;
+    box-shadow:0 12px 26px rgba(60,30,45,.10);display:flex;align-items:center;padding:6px 8px;gap:2px}
+  .dock .qa{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;font-size:11px;color:var(--ink2)}
+  .dock .new{width:88px;align-self:stretch;border-radius:24px;background:var(--pink);color:#fff;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font-size:11px;font-weight:600}
+
+  /* 设置 */
+  .settitle{font-size:28px;font-weight:700;padding:6px 20px 14px;letter-spacing:-.6px}
+  .search{background:#fff;border-radius:18px;height:44px;display:flex;align-items:center;gap:9px;padding:0 14px;color:var(--ink3);font-size:13px;margin-bottom:14px}
+  .item{background:#fff;display:flex;align-items:center;gap:12px;padding:14px 16px}
+  .item:first-child{border-radius:20px 20px 0 0}
+  .item:last-child{border-radius:0 0 20px 20px}
+  .item.only{border-radius:20px}
+  .item+.item{border-top:1px solid #F3EFF2}
+  .ico{width:34px;height:34px;border-radius:50%;background:var(--pink-soft);display:flex;align-items:center;justify-content:center;flex:none}
+  .ico.gray{background:#F1EEF1}
+  .val{margin-left:auto;font-size:12.5px;color:var(--ink3);white-space:nowrap}
+  .group{margin-bottom:20px}
+
+  /* 对话 */
+  .chatbar{display:flex;align-items:center;gap:10px;padding:6px 16px 8px}
+  .chatbar .mid{flex:1;background:#fff;border-radius:23px;height:46px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .chatbar .mid b{font-size:15px}
+  .chatbar .mid span{font-size:10.5px;color:var(--ink3);margin-top:2px}
+  .msg{display:flex;gap:9px;margin-bottom:14px}
+  .msg .av{width:28px;height:28px;border-radius:50%;overflow:hidden;flex:none}
+  .msg .av img{width:100%;height:100%}
+  .bubble{background:#fff;border-radius:6px 18px 18px 18px;padding:11px 13px;font-size:14.6px;line-height:1.72;
+    max-width:250px;box-shadow:0 4px 14px rgba(60,30,45,.05)}
+  .who{font-size:10.4px;color:var(--ink3);font-weight:600;margin-bottom:6px}
+  .think{background:var(--pink-tint);border:0.8px solid #F6D9E4;border-radius:12px;padding:9px 11px;margin-bottom:8px}
+  .think .th{display:flex;align-items:center;justify-content:space-between;font-size:11px;font-weight:700;color:var(--pink-deep)}
+  .think p{margin:5px 0 0;font-size:12.4px;color:var(--ink2);line-height:1.65}
+  .user{align-self:flex-end;background:var(--pink-soft);border-radius:18px 6px 18px 18px;padding:10px 14px;
+    font-size:14.6px;max-width:235px;line-height:1.7}
+  .userwrap{display:flex;justify-content:flex-end;margin-bottom:12px}
+  .toolrow{display:flex;justify-content:flex-end;gap:14px;padding:2px 18px 6px;color:#B3AEB4}
+  .inputwrap{padding:0 14px 12px}
+  .inputbar{background:var(--input);border-radius:27px;height:54px;display:flex;align-items:center;padding:0 9px;gap:9px}
+  .inputbar .add{width:34px;height:34px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center}
+  .inputbar .ph{flex:1;font-size:15px;color:var(--ink3)}
+  .inputbar .send{width:38px;height:38px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center}
+  .code{background:#F5F2F5;border-radius:13px;margin:8px 0 2px;overflow:hidden}
+  .code .ch{height:34px;background:#EFEBEF;display:flex;align-items:center;padding:0 12px;font-size:10.2px;color:var(--ink3);letter-spacing:.6px;font-weight:600}
+  .code .ch .cp{margin-left:auto;background:#fff;border-radius:12px;height:23px;padding:0 9px;display:flex;align-items:center;gap:4px;font-size:10.6px;color:var(--ink2);letter-spacing:0}
+  .code pre{margin:0;padding:10px 12px;font-family:"SF Mono",Menlo,Consolas,monospace;font-size:12.4px;line-height:1.65;color:#1C1B1D}
+  .k{color:#C2437B}.s{color:#2F8F5B}.c{color:#9B979F}.n{color:#B06A00}.f{color:#3C6FBF}
+  .tokens{margin-top:44px;text-align:center;font-size:11.5px;color:#8b838a;line-height:2}
+  .swatches{display:flex;gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap}
+  .sw{display:flex;align-items:center;gap:6px;font-size:10.5px;color:#6b646a}
+  .sw i{width:14px;height:14px;border-radius:4px;display:block;box-shadow:0 0 0 1px rgba(0,0,0,.05)}
+</style>
+</head>
+<body>
+
+<h1>ChatYUE · 界面预览</h1>
+<p class="sub">按 Android 1.5（API 3）自绘体系还原的视觉稿 · 非运行时截图<br>所有卡片、胶囊、浮层、图标均由 Canvas 绘制，无系统控件外观</p>
+
+<div class="row">
+
+  <!-- ============ 首页 ============ -->
+  <div>
+  <div class="phone">
+    <div class="status"><span>晚上 9:03</span><span class="dots"><i></i><i></i><i></i></span></div>
+    <div class="page">
+      <div class="topbar">
+        <div class="circle"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#6E6B72" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8.4" r="3.7"/><path d="M4.8 20c.6-4.4 3.6-6.4 7.2-6.4s6.6 2 7.2 6.4"/></svg></div>
+        <div class="seg"><b class="on">任务</b><b>Agent</b><b>群聊</b></div>
+        <div class="circle"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6E6B72" stroke-width="1.9" stroke-linecap="round"><circle cx="10.6" cy="10.6" r="6.1"/><path d="M15.2 15.2 19.6 19.6"/></svg></div>
+      </div>
+      <div class="scroll" style="padding-bottom:110px">
+        <div class="greet h">晚上好</div>
+        <div class="date">11月12日 星期四</div>
+        <div class="lead">今天还没聊什么，想到什么随时找我。</div>
+
+        <div class="avatarline">
+          <div class="ava"><img src="icon.png" alt="ChatYUE"><span>ChatYUE</span></div>
+          <div class="plus"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1C1B1D" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+        </div>
+
+        <div class="sec">最近<em>全部会话</em></div>
+        <div class="card">
+          <span class="dot"></span>
+          <div><div class="title">夜里写下的那半页</div><div class="desc">还没收尾，今晚也许能续上 · 21:03</div></div>
+          <svg class="chev" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9.4 5.4 16 12l-6.6 6.6"/></svg>
+        </div>
+
+        <div class="sec">资料</div>
+        <div class="card">
+          <div class="ico gray"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6E6B72" stroke-width="1.7" stroke-linejoin="round"><path d="M4.4 5.2h7v13.8h-7zM12.6 5.2h7v13.8h-7z"/><path d="M12 5.4v13.6"/></svg></div>
+          <div><div class="title">知识库</div><div class="desc">3 条资料片段</div></div>
+          <svg class="chev" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9.4 5.4 16 12l-6.6 6.6"/></svg>
+        </div>
+      </div>
+
+      <div class="dock">
+        <div class="qa"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6E6B72" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 7.4v4.8l3.6 1.8"/></svg>定时任务</div>
+        <div class="qa"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6E6B72" stroke-width="1.8" stroke-linejoin="round"><path d="M5 19l1.2-4.6L15.6 5 19 8.4l-9.4 9.4z"/><path d="M13.6 7 17 10.4"/></svg>快速记录</div>
+        <div class="qa"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6E6B72" stroke-width="1.6" stroke-linecap="round"><path d="M12.6 16.6h7"/><text x="4" y="12" font-size="9.6" font-weight="700" fill="#6E6B72" stroke="none">文</text><text x="14.4" y="9.4" font-size="6.4" font-weight="700" fill="#6E6B72" stroke="none">A</text></svg>快速翻译</div>
+        <div class="new"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>新任务</div>
+      </div>
+    </div>
+  </div>
+  <div class="caption">首页 · 任务</div>
+  </div>
+
+  <!-- ============ 设置 ============ -->
+  <div>
+  <div class="phone">
+    <div class="status"><span>晚上 9:03</span><span class="dots"><i></i><i></i><i></i></span></div>
+    <div class="page">
+      <div style="padding:6px 12px 0">
+        <div class="circle" style="background:transparent;width:38px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1C1B1D" stroke-width="1.9" stroke-linecap="round"><path d="M14.5 5 7.5 12l7 7"/></svg></div>
+      </div>
+      <div class="settitle">设置</div>
+      <div class="scroll" style="padding-bottom:10px">
+        <div class="search"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#9B979F" stroke-width="1.9" stroke-linecap="round"><circle cx="10.6" cy="10.6" r="6.1"/><path d="M15.2 15.2 19.6 19.6"/></svg>搜索设置项…</div>
+
+        <div class="group">
+          <div class="item only" style="border-radius:20px">
+            <div class="ico" style="background:var(--pink-soft);color:var(--pink-deep);font-size:14px;font-weight:700">主</div>
+            <div><div class="title">主人</div><div class="desc">编辑个人资料</div></div>
+            <svg class="chev" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9.4 5.4 16 12l-6.6 6.6"/></svg>
+          </div>
+        </div>
+
+        <div style="font-size:13.5px;color:var(--ink2);margin:4px 0 10px">助手与人设</div>
+        <div class="group">
+          <div class="item">
+            <div class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E2658F" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8.4" r="3.7"/><path d="M4.8 20c.6-4.4 3.6-6.4 7.2-6.4s6.6 2 7.2 6.4"/></svg></div>
+            <div><div class="title">用户画像</div><div class="desc">称呼 / 偏好 / 沟通习惯</div></div>
+            <svg class="chev" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9.4 5.4 16 12l-6.6 6.6"/></svg>
+          </div>
+          <div class="item">
+            <div class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E2658F" stroke-width="1.6" stroke-linecap="round"><path d="M12 3.4 13.4 10.6 20.6 12 13.4 13.4 12 20.6 10.6 13.4 3.4 12 10.6 10.6z"/></svg></div>
+            <div><div class="title">助手</div><div class="desc">管理助手、模型、角色设定与世界书</div></div>
+            <svg class="chev" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9.4 5.4 16 12l-6.6 6.6"/></svg>
+          </div>
+          <div class="item">
+            <div class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E2658F" stroke-width="1.7" stroke-linejoin="round"><rect x="4.4" y="7.6" width="15.2" height="11.6" rx="3.4"/><path d="M12 4v3.6M9 12.4h.01M15 12.4h.01M9.4 16h5.2"/></svg></div>
+            <div><div class="title">Agent</div><div class="desc">助手选择 / 协作 / 主动消息</div></div>
+            <svg class="chev" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9.4 5.4 16 12l-6.6 6.6"/></svg>
+          </div>
+          <div class="item">
+            <div class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E2658F" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3.4l2.4 5.4 5.9.6-4.4 4 1.2 5.8L12 16.1 6.9 19.2 8.1 13.4 3.7 9.4l5.9-.6z"/></svg></div>
+            <div><div class="title">助手资源</div><div class="desc">收藏夹 / 世界书 / 快捷消息 / 技能</div></div>
+            <svg class="chev" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9.4 5.4 16 12l-6.6 6.6"/></svg>
+          </div>
+        </div>
+
+        <div style="font-size:13.5px;color:var(--ink2);margin:4px 0 10px">模型提供方</div>
+        <div class="group">
+          <div class="item">
+            <div class="ico" style="background:var(--pink-soft);color:var(--pink-deep);font-size:13px;font-weight:700">C</div>
+            <div><div class="title">ChatYUE</div><div class="desc">内置 · GLM-4.1V-Thinking-Flash</div></div>
+            <div class="val">默认</div>
+            <svg class="chev" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9.4 5.4 16 12l-6.6 6.6"/></svg>
+          </div>
+          <div class="item">
+            <div class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E2658F" stroke-width="1.7" stroke-linejoin="round"><rect x="4.4" y="7.6" width="15.2" height="11.6" rx="3.4"/><path d="M9 12.4h.01M15 12.4h.01M9.4 16h5.2"/></svg></div>
+            <div><div class="title">本地 Qwen</div><div class="desc">qwen2.5-72b-instruct · 第三方</div></div>
+            <svg class="chev" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9.4 5.4 16 12l-6.6 6.6"/></svg>
+          </div>
+          <div class="item" style="border-radius:0 0 20px 20px">
+            <div class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E2658F" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+            <div><div class="title">添加第三方模型</div><div class="desc">自定义 Base URL / API Key / 模型名</div></div>
+            <svg class="chev" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9.4 5.4 16 12l-6.6 6.6"/></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="caption">设置 · 模型提供方</div>
+  </div>
+
+  <!-- ============ 对话 ============ -->
+  <div>
+  <div class="phone">
+    <div class="status"><span>晚上 9:04</span><span class="dots"><i></i><i></i><i></i></span></div>
+    <div class="page">
+      <div class="chatbar">
+        <div class="circle pink"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#1C1B1D" stroke-width="1.9" stroke-linecap="round"><path d="M14.5 5 7.5 12l7 7"/></svg></div>
+        <div class="mid"><b>ChatYUE</b><span>正在回复 · ChatYUE</span></div>
+        <div class="circle pink"><svg width="18" height="18" viewBox="0 0 24 24" fill="#1C1B1D"><circle cx="12" cy="5.6" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="12" cy="18.4" r="1.9"/></svg></div>
+      </div>
+
+      <div class="scroll" style="padding-top:6px">
+        <div class="userwrap"><div class="user">夜里九点，忽然想找个人说会儿话。</div></div>
+
+        <div class="msg">
+          <div class="av"><img src="icon.png" alt=""></div>
+          <div style="max-width:252px">
+            <div class="who">ChatYUE</div>
+            <div class="bubble">
+              <div class="think">
+                <div class="th">正在思考…<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E2658F" stroke-width="1.8" stroke-linecap="round"><path d="M5.4 14.6 12 8l6.6 6.6"/></svg></div>
+                <p>这个点来找我，多半不是正事，但也可能憋着个念头。先接住那句招呼，别急着派活，留个口子等他自己说。</p>
+              </div>
+              <div>主人，晚上好。</div>
+              <div style="margin-top:8px">这个点坐下来，是准备安静一会儿，还是脑子里揣着点什么想动手？夜读那页还留在那儿没收拾，今晚要接着弄也行。</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="msg">
+          <div class="av"><img src="icon.png" alt=""></div>
+          <div style="max-width:252px">
+            <div class="who">ChatYUE</div>
+            <div class="bubble">
+              <div>给你一段能跑的最小例子：</div>
+              <div class="code">
+                <div class="ch">JAVA <span class="cp"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#6E6B72" stroke-width="1.6" stroke-linejoin="round"><rect x="8.6" y="8.6" width="10.8" height="10.8" rx="2.4"/><path d="M15.4 5.6H5.2v9.8"/></svg>复制</span></div>
+                <pre><span class="k">public</span> <span class="k">void</span> <span class="f">draw</span>(Canvas c) {
+  Paint p = <span class="k">new</span> <span class="f">Paint</span>();
+  p.<span class="f">setColor</span>(<span class="n">0xFFEF7FA8</span>);
+  c.<span class="f">drawCircle</span>(cx, cy, r, p);
+}</pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="toolrow">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><rect x="8.6" y="8.6" width="10.8" height="10.8" rx="2.4"/><path d="M15.4 5.6H5.2v9.8"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4.6 12a7.4 7.4 0 1 1 2.2 5.3"/><path d="M4.4 16.6v-4h4"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="17.6" cy="5.8" r="2.6"/><circle cx="6.4" cy="12" r="2.6"/><circle cx="17.6" cy="18.2" r="2.6"/><path d="M8.8 10.8 15.2 7M8.8 13.2 15.2 17"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4.6 7h14.8M9.2 7l.6-2.6M14.8 7l-.6-2.6M6.4 7l1 12.8h9.2L17.6 7"/></svg>
+      </div>
+
+      <div class="inputwrap">
+        <div class="inputbar">
+          <div class="add"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#1C1B1D" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+          <div class="ph">发消息…</div>
+          <div class="send"><svg width="17" height="17" viewBox="0 0 24 24" fill="#1C1B1D"><path d="M3.4 19.6 21 12 3.4 4.4l2.5 6.8 8.5.8-8.5.8z"/></svg></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="caption">对话 · 思考卡片 / Markdown / 代码块</div>
+  </div>
+
+</div>
+
+<div class="tokens">
+  设计令牌（与 <code>core/Palette.java</code> 一一对应）
+  <div class="swatches">
+    <span class="sw"><i style="background:#F6F3F5"></i>BG F6F3F5</span>
+    <span class="sw"><i style="background:#EF7FA8"></i>PINK EF7FA8</span>
+    <span class="sw"><i style="background:#FBE3EB"></i>PINK_SOFT FBE3EB</span>
+    <span class="sw"><i style="background:#FDF2F6"></i>PINK_TINT FDF2F6</span>
+    <span class="sw"><i style="background:#1C1B1D"></i>INK 1C1B1D</span>
+    <span class="sw"><i style="background:#EFEAEE"></i>INPUT EFEAEE</span>
+  </div>
+  <div style="margin-top:12px">圆角 16–24dp · 动效 90–340ms · 按压反馈 0.92 缩放 + 8% 加深</div>
+</div>
+
+</body>
+</html>

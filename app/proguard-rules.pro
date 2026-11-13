@@ -1,0 +1,3 @@
+-keep class com.chatyue.app.** { *; }
+-keep class com.wolfssl.** { *; }
+-dontwarn com.wolfssl.**
