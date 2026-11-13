@@ -91,10 +91,10 @@ Muse 使用 **GNU General Public License v3.0**；因此本仓库同样以 **GPL
 | --- | --- |
 | 包名 / 版本 | `com.chatyue.app` / 3.0 (versionCode 4) |
 | minSdkVersion | 3（Android 1.5 Cupcake） |
-| 体积 | 约 385 KB（不含可选 wolfSSL `.so`） |
+| 体积 | 约 2.5 MB（含 8 个 ABI 的 wolfSSL bridge） |
 | DEX | d8 生成，`--min-api 3` |
 | 签名 | v1（JAR, SHA1 摘要）+ v2；Android 1.5–2.3 只认 v1，故必须带 SHA1 |
-| SHA-256 | `4fec36c248530fff7d05251bdc96f0cfc8ecb8ad46b95017ce96890559e060f9` |
+| SHA-256 | `6b6faa6ccb3afcdbe26d0747b29872a70fdb23db95a355cb3c3cb70cba6288c6` |
 
 安装时系统会提示“未知来源”，允许即可。签名密钥是仓库内 `keystore/debug.keystore`
 （口令 `android`，仅供调试安装，不要用于正式分发）。
@@ -141,16 +141,25 @@ cd ChatYUE
 若本机没有 gradle wrapper 的 jar，可直接用 Android Studio 打开工程（会自动补全 wrapper），
 或使用本机 Gradle 7.3+：`gradle assembleDebug`。
 
-### 编译 wolfSSL 兜底库（HTTPS 链路需要）
+### wolfSSL 兜底库（已随仓库提供 8 ABI）
+
+`app/src/main/jniLibs/` 已包含以下 ABI 的 `libwolfssl_bridge.so`：
+
+`armeabi` · `armeabi-v7a` · `arm64-v8a` · `x86` · `x86_64` · `mips` · `mips64` · `riscv64`
+
+它们静态链接 wolfSSL 5.7.4，运行时只依赖 libc/libm/liblog/libdl，不依赖
+`libwolfssl.so` 或 `libstdc++`。重新生成走 GitHub Actions（不占本地 CPU）：
 
 ```bash
-export NDK=$HOME/Android/Sdk/ndk/21.4.7075529
-cd app/src/main/jni
-sh build_native.sh
+# 触发 workflow：Build wolfSSL Bridge (all ABIs)
+gh workflow run build-wolfssl.yml
+# 或直接用仓库的 Actions 页面点 Run workflow
 ```
 
-脚本会拉 wolfSSL 源码、`ndk-build` 出 `armeabi / armeabi-v7a / x86` 三套
-`libwolfssl_bridge.so` 并拷进 `src/main/jniLibs/`。
+workflow 定义在 `.github/workflows/build-wolfssl.yml`，实际编译脚本是
+`scripts/build_wolfssl_ci.sh`（legacy 7 ABI 用 NDK r10e，riscv64 用 NDK r27d）。
+旧的 `app/src/main/jni/build_native.sh` 只覆盖 armeabi / armeabi-v7a / x86，
+保留作为本机快速构建入口。
 **没有 .so 时应用照常启动**，走 HTTP 端点完全正常；只有访问 HTTPS 且平台 TLS 握手失败时，
 会明确提示「wolfSSL 兜底库未加载」。
 
@@ -386,9 +395,10 @@ chatUrl() ────┤
 
 ## 十二、已知边界（如实说明）
 
-1. **wolfSSL `.so` 未随仓库提供**：沙箱内没有 NDK，无法交叉编译。源码、`Android.mk`、
-   `Application.mk`、`build_native.sh` 均已就绪，执行脚本即可产出三套 ABI 的 `.so`。
-   未编译时：HTTP 链路完全可用，HTTPS 会在错误面板里明确提示兜底库未加载。
+1. **wolfSSL `.so` 已随仓库提供 8 ABI**：legacy 7 ABI 由 NDK r10e 构建，riscv64 由
+   NDK r27d 构建，均静态链接 wolfSSL 5.7.4。MIPS / RISC-V 属于极冷门 Android 设备，
+   系统是否加载对应 ABI 取决于设备本身；常见 ARM / x86 设备直接可用。
+   HTTP 链路完全不依赖它，HTTPS 在平台 TLS 握手失败时才会走 wolfSSL。
 2. **状态栏底色**：API 21 才有 `setStatusBarColor`，1.5 上系统状态栏保持默认灰色，无法自绘。
 3. **没有本地模型**：应用不含任何端侧推理能力，也没有「本地模型」这一类提供方。
    所有对话都走云端接口；离线时只能查看历史，不能生成。设置里也不会出现任何
