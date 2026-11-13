@@ -56,7 +56,6 @@ CONFIG_FLAGS=(
     --disable-crypttests
     --disable-benchmark
     --disable-asm
-    --disable-zlib
     --enable-sni
 )
 
@@ -158,11 +157,11 @@ build_legacy() {
     # x86：API 9
     build_legacy_one x86 i686-linux-android x86 android-9 x86-4.9 "" || failed=1
     # mips：API 9
-    build_legacy_one mips mipsel-linux-android mips android-9 mips-4.9 "" || failed=1
+    build_legacy_one mips mipsel-linux-android mips android-9 mipsel-linux-android-4.9 "" || failed=1
     # 64 位：API 21
     build_legacy_one arm64-v8a aarch64-linux-android arm64 android-21 aarch64-linux-android-4.9 "" || failed=1
     build_legacy_one x86_64 x86_64-linux-android x86_64 android-21 x86_64-4.9 "" || failed=1
-    build_legacy_one mips64 mips64el-linux-android mips64 android-21 mips64-4.9 "" || failed=1
+    build_legacy_one mips64 mips64el-linux-android mips64 android-21 mips64el-linux-android-4.9 "" || failed=1
     return $failed
 }
 
