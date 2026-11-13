@@ -116,7 +116,7 @@ Java_com_chatyue_app_net_WolfSsl_connect(JNIEnv *env, jclass clazz, jstring jhos
         return 0;
     }
     /* 允许 TLS 1.0/1.1 老站点 + 现代 TLS 1.2/1.3 站点 */
-    wolfSSL_CTX_set_min_proto_version(ctx, TLSv1_VERSION);
+    wolfSSL_CTX_SetMinVersion(ctx, WOLFSSL_TLSV1);
 
     if (g_caPath[0] != '\0') {
         if (wolfSSL_CTX_load_verify_locations(ctx, g_caPath, NULL) != WOLFSSL_SUCCESS) {
