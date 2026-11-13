@@ -24,16 +24,21 @@ public final class FileSharing {
         try {
             Intent intent;
             ArrayList<Uri> uris = new ArrayList<Uri>();
+            ArrayList<File> prepared = new ArrayList<File>();
             for (int i = 0; i < files.size(); i++) {
-                File f = files.get(i);
+                File f = prepare(c, files.get(i));
+                if (f == null) continue;
                 Uri u = uriFor(c, f);
-                if (u != null) uris.add(u);
+                if (u != null) {
+                    uris.add(u);
+                    prepared.add(f);
+                }
             }
             if (uris.isEmpty()) return;
             if (uris.size() == 1) {
                 intent = new Intent(Intent.ACTION_SEND);
                 intent.putExtra(Intent.EXTRA_STREAM, uris.get(0));
-                intent.setType(AgentFileProvider.typeFor(files.get(0).getName()));
+                intent.setType(AgentFileProvider.typeFor(prepared.get(0).getName()));
             } else {
                 intent = new Intent(Intent.ACTION_SEND_MULTIPLE);
                 intent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris);
@@ -61,7 +66,9 @@ public final class FileSharing {
      * Android 11+ 需要「所有文件」权限；没有权限时由调用方引导授权。
      */
     public static File saveToDownloads(Context c, File src) {
-        if (src == null || !src.exists() || !src.isFile()) return null;
+        if (src == null || !src.exists()) return null;
+        src = prepare(c, src);
+        if (src == null || !src.isFile()) return null;
         File outDir = null;
         try {
             outDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
@@ -97,6 +104,8 @@ public final class FileSharing {
      */
     public static String saveViaMediaStore(Context c, File src) {
         if (src == null || !src.exists()) return null;
+        src = prepare(c, src);
+        if (src == null) return null;
         android.content.ContentValues v = new android.content.ContentValues();
         v.put("_display_name", src.getName());
         v.put("mime_type", AgentFileProvider.typeFor(src.getName()));
@@ -129,8 +138,27 @@ public final class FileSharing {
         }
     }
 
+    /** 目录不能直接分享/保存，先压成同名 zip 放到缓存。 */
+    private static File prepare(Context c, File src) {
+        if (src == null || !src.exists() || !src.isDirectory()) return src;
+        try {
+            File dir = new File(c.getCacheDir(), "share");
+            FileUtil.mkdirs(dir);
+            File out = new File(dir, src.getName() + ".zip");
+            if (out.exists()) FileUtil.delete(out);
+            com.chatyue.app.data.AgentTools.zipFolder(c, src, out);
+            return out;
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
     /** 保存到应用自己的外部目录（不需要任何权限，卸载时一起删除）。 */
-    public static File saveToAppStorage(Context c, File src) {        try {
+    public static File saveToAppStorage(Context c, File src) {
+        if (src == null || !src.exists()) return null;
+        src = prepare(c, src);
+        if (src == null) return null;
+        try {
             File base = c.getExternalFilesDir(null);
             if (base == null) base = new File(c.getFilesDir(), "exports");
             File outDir = new File(base, "ChatYUE");

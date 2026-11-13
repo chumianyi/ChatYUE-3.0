@@ -74,11 +74,11 @@ public final class AgentTools {
         }
         String rootPath = root.getCanonicalPath();
         String target = f.getCanonicalPath();
-        if (target.equals(rootPath) || target.startsWith(rootPath + File.separator)) return f;
+        if (target.equals(rootPath) || target.startsWith(rootPath + File.separator)) return new File(target);
         // 用户导入的附件在 files/attachments，允许 Agent 按系统提示里的绝对路径读取。
         File attach = new File(c.getFilesDir(), "attachments");
         String attachPath = attach.getCanonicalPath();
-        if (target.startsWith(attachPath + File.separator)) return f;
+        if (target.startsWith(attachPath + File.separator)) return new File(target);
         throw new SecurityException("路径越界，只能操作工作目录：" + p);
     }
 
@@ -136,7 +136,9 @@ public final class AgentTools {
                         + "（" + content.length() + " 字符）");
             } else if (TOOL_DELETE.equals(tool)) {
                 File f = resolve(c, path);
-                if (f.equals(root(c))) throw new IOException("不能删除工作目录本身");
+                if (f.getCanonicalPath().equals(root(c).getCanonicalPath())) {
+                    throw new IOException("不能删除工作目录本身");
+                }
                 if (!f.exists()) throw new IOException("不存在：" + path);
                 boolean ok = FileUtil.delete(f);
                 out.put("ok", ok);
@@ -151,6 +153,9 @@ public final class AgentTools {
             } else if (TOOL_MOVE.equals(tool)) {
                 File from = resolve(c, call.optString("from", ""));
                 File to = resolve(c, call.optString("to", ""));
+                if (from.getCanonicalPath().equals(root(c).getCanonicalPath())) {
+                    throw new IOException("不能移动工作目录本身");
+                }
                 if (!from.exists()) throw new IOException("源不存在：" + call.optString("from", ""));
                 FileUtil.mkdirs(to.getParentFile());
                 if (!from.renameTo(to)) {
@@ -270,6 +275,13 @@ public final class AgentTools {
                 }
             }
         }
+    }
+
+    /** 供分享/保存使用：把一个目录压成 zip。 */
+    public static int zipFolder(Context c, File dir, File out) throws IOException {
+        ArrayList<File> inputs = new ArrayList<File>();
+        inputs.add(dir);
+        return zip(c, inputs, out);
     }
 
     /** 返回写入的条目数。 */
