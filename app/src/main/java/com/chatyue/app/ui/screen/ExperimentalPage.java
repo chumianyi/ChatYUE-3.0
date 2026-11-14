@@ -54,7 +54,10 @@ public class ExperimentalPage extends BasePage {
                 });
         note("开启后，对话会自动进入 Agent 模式：模型可以列出/读取/创建/修改/删除文件，"
                 + "创建文件夹，压缩与解压 zip，访问网页、下载文件，写完 HTML 还能直接预览。"
-                + "在终端模式下还可以执行 Android shell 命令（非 root）。");
+                + "在终端模式下还可以执行 Android shell 命令（非 root）。"
+                + "如需操控自己的服务器，在聊天页右上角「配置服务器连接」填写 SSL/HTTPS "
+                + "地址、令牌和远程目录；Agent 会用 server_exec 多轮执行远程命令。"
+                + "总轮数不设上限，随时可以停止。");
 
         section("全部文件");
         if (!Experiment.supportsAllFiles()) {

@@ -51,6 +51,12 @@ public final class Prefs {
     public static final String KEY_WORKSPACE_LEGACY = "workspace_all_files";
     public static final String KEY_CRASH_LAST = "crash_last_path";
     public static final String KEY_AGENT_MAX_ROUNDS = "agent_max_rounds";
+    // ---- 3.0 服务器连接（HTTPS 命令端点） ----
+    public static final String KEY_SERVER_ENABLED = "server_enabled";
+    public static final String KEY_SERVER_URL = "server_url";
+    public static final String KEY_SERVER_TOKEN = "server_token";
+    public static final String KEY_SERVER_CWD = "server_cwd";
+    public static final String KEY_SERVER_SELF_SIGNED = "server_self_signed";
 
     private Prefs() {
     }
@@ -217,11 +223,53 @@ public final class Prefs {
         setBool(c, KEY_THINKING + p.id, v);
     }
 
+    /** 0 = 不限制总轮数；3.0 起 Agent 任务允许多次请求直到模型给出最终回答。 */
     public static int agentMaxRounds(Context c) {
-        int n = getInt(c, KEY_AGENT_MAX_ROUNDS, 12);
-        if (n < 3) n = 3;
-        if (n > 24) n = 24;
-        return n;
+        return 0;
+    }
+
+    public static boolean serverEnabled(Context c) {
+        return getBool(c, KEY_SERVER_ENABLED, false);
+    }
+
+    public static void setServerEnabled(Context c, boolean v) {
+        setBool(c, KEY_SERVER_ENABLED, v);
+    }
+
+    public static String serverUrl(Context c) {
+        return getString(c, KEY_SERVER_URL, "");
+    }
+
+    public static void setServerUrl(Context c, String v) {
+        setString(c, KEY_SERVER_URL, v == null ? "" : v.trim());
+    }
+
+    public static String serverToken(Context c) {
+        return getString(c, KEY_SERVER_TOKEN, "");
+    }
+
+    public static void setServerToken(Context c, String v) {
+        setString(c, KEY_SERVER_TOKEN, v == null ? "" : v.trim());
+    }
+
+    public static String serverCwd(Context c) {
+        return getString(c, KEY_SERVER_CWD, "/");
+    }
+
+    public static void setServerCwd(Context c, String v) {
+        setString(c, KEY_SERVER_CWD, v == null || v.trim().length() == 0 ? "/" : v.trim());
+    }
+
+    public static boolean serverSelfSigned(Context c) {
+        return getBool(c, KEY_SERVER_SELF_SIGNED, false);
+    }
+
+    public static void setServerSelfSigned(Context c, boolean v) {
+        setBool(c, KEY_SERVER_SELF_SIGNED, v);
+    }
+
+    public static boolean serverConfigured(Context c) {
+        return serverUrl(c).length() > 0 && serverToken(c).length() > 0;
     }
 
     public static String crashLogPath(Context c) {

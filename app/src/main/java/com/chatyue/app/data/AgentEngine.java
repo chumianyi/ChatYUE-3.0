@@ -129,7 +129,7 @@ public final class AgentEngine {
         final Parsed parsed = parse(raw);
         if (parsed.clean.length() > 0) lastClean = parsed.clean;
         if (parsed.calls.isEmpty()) {
-            if (parsed.invalid && index < maxRounds) {
+            if (parsed.invalid && (maxRounds <= 0 || index < maxRounds)) {
                 // 模型写了 <tool> 但 JSON 不合法：不要把它当最终回答，把错误回灌让它修正。
                 cb.onLog("工具块格式错误，正在让模型修正：" + parsed.error);
                 Message bad = new Message(Message.ROLE_USER,
@@ -143,7 +143,7 @@ public final class AgentEngine {
             cb.onFinal(lastClean.length() == 0 ? "任务已完成。" : lastClean, lastReasoning, artifacts);
             return;
         }
-        if (index >= maxRounds) {
+        if (maxRounds > 0 && index >= maxRounds) {
             String note = "（已达到 " + maxRounds + " 轮上限，停止继续执行工具）";
             cb.onLog(note);
             cb.onFinal(lastClean.length() == 0

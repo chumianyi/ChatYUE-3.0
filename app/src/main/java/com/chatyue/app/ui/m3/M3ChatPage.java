@@ -169,7 +169,9 @@ public class M3ChatPage extends Page implements M3InputBar.Listener {
 
     private String subtitle() {
         int days = TimeUtil.daysSince(Prefs.firstLaunch(act));
-        return Providers.current(act).name + " · 陪伴 " + days + " 天";
+        String server = Prefs.serverEnabled(act) && Prefs.serverConfigured(act)
+                ? " · 服务器已连接" : "";
+        return Providers.current(act).name + " · 陪伴 " + days + " 天" + server;
     }
 
     private LinearLayout buildQuickBar() {
@@ -1060,6 +1062,11 @@ public class M3ChatPage extends Page implements M3InputBar.Listener {
         sheet.add(Icons.SHARE, "复制整段对话", new Runnable() {
             public void run() {
                 exportMarkdown();
+            }
+        });
+        sheet.add(Icons.SERVER, "配置服务器连接", new Runnable() {
+            public void run() {
+                act.openServerSettings();
             }
         });
         sheet.add(Icons.GEAR, "设置", new Runnable() {

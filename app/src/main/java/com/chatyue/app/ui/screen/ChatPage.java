@@ -155,7 +155,9 @@ public class ChatPage extends Page implements InputBar.Listener, Bubble.Listener
     private String subtitle() {
         int days = TimeUtil.daysSince(Prefs.firstLaunch(act));
         String model = Providers.current(act).name;
-        return model + " · 陪伴 " + days + " 天";
+        String server = Prefs.serverEnabled(act) && Prefs.serverConfigured(act)
+                ? " · 服务器已连接" : "";
+        return model + " · 陪伴 " + days + " 天" + server;
     }
 
     private LinearLayout buildQuickBar() {
@@ -1079,6 +1081,11 @@ public class ChatPage extends Page implements InputBar.Listener, Bubble.Listener
         sheet.add(Icons.INFO, "会话信息与导出", new Runnable() {
             public void run() {
                 act.push(new SessionDetailPage(act, session));
+            }
+        });
+        sheet.add(Icons.SERVER, "配置服务器连接", new Runnable() {
+            public void run() {
+                act.openServerSettings();
             }
         });
         sheet.add(Icons.GEAR, "设置", new Runnable() {

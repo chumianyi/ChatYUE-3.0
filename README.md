@@ -12,6 +12,8 @@
 > - 重绘「重新生成」矢量图标，箭头方向与圆弧缺口一致；
 > - 三个**默认关闭**的实验性功能（设置或新手引导可开启）：反思、Agent 多轮任务、让 Agent 操控所有文件；
 > - Agent 可创建 / 读取 / 修改 / 删除文件与文件夹，压缩 / 解压 zip，访问网页（open_url）、下载文件（download_url）、执行 shell（run_command）与受限 Python（run_python），结束时用产物卡片展示；
+> - **服务器连接**：聊天页右上角「配置服务器连接」可配置 SSL/HTTPS 命令端点（地址 + Bearer 令牌 + 远程工作目录），Agent 新增 `server_exec` 工具，可在服务器上多轮执行命令；`server/` 提供参考端点；
+> - **Agent 不再限制总轮数**：一次任务由多次模型请求、多次工具执行组成，直到模型给出最终回答；本地 shell 仍按一次命令执行；
 > - 新增 Android 系统终端（/system/bin/sh），AI 可调用 run_command 执行开发命令；
 > - 消息管理改到每条消息右上角的三点按钮，不再依赖长按；双击消息复制文本；经典 M3 修复设置行重叠、时间与删除按钮重叠、气泡形状和输入框提示；修复默认模式胶囊开关点击后不重绘、状态与 UI 不一致；
 > - 任意大小附件导入（流式复制）；HTML 预览支持同目录 CSS/JS；文本 / 代码在线预览；
@@ -96,7 +98,7 @@ Muse 使用 **GNU General Public License v3.0**；因此本仓库同样以 **GPL
 | 体积 | 约 2.5 MB（含 8 个 ABI 的 wolfSSL bridge） |
 | DEX | d8 生成，`--min-api 3` |
 | 签名 | v1（JAR, SHA1 摘要）+ v2；Android 1.5–2.3 只认 v1，故必须带 SHA1 |
-| SHA-256 | `eac2d6f807517762644ccb4f33576ec54f36b7ee4cd10a4d76104a9459f70cbd` |
+| SHA-256 | `d514132cbf3b3d4c8bcfc2c9e9e2be2b8da97842c1e8e1dba62200326a0fae93` |
 
 安装时系统会提示“未知来源”，允许即可。签名密钥是仓库内 `keystore/debug.keystore`
 （口令 `android`，仅供调试安装，不要用于正式分发）。

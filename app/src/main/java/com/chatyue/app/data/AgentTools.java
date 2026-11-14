@@ -47,6 +47,7 @@ public final class AgentTools {
     public static final String TOOL_DOWNLOAD = "download_url";
     public static final String TOOL_SHELL = "run_command";
     public static final String TOOL_PYTHON = "run_python";
+    public static final String TOOL_SERVER = "server_exec";
 
     private static final long MAX_READ = 400L * 1024L;
     private static final int MAX_WEB = 300 * 1024;
@@ -221,6 +222,18 @@ public final class AgentTools {
             } else if (TOOL_PYTHON.equals(tool) || "python".equals(tool)) {
                 out.put("ok", true);
                 out.put("output", runPython(c, call));
+            } else if (TOOL_SERVER.equals(tool) || "remote_exec".equals(tool)
+                    || "remote_command".equals(tool)) {
+                String command = call.optString("command", call.optString("cmd", ""));
+                if (command.length() == 0) throw new IOException("缺少 command");
+                String cwd = call.optString("cwd", Prefs.serverCwd(c));
+                int timeout = call.optInt("timeout", 30000);
+                if (timeout < 1000) timeout = 1000;
+                if (timeout > 120000) timeout = 120000;
+                RemoteServer.Result r = RemoteServer.exec(c, command, cwd, timeout);
+                out.put("ok", r.ok());
+                out.put("output", "remote exit=" + r.exit + (r.timeout ? "（超时）" : "")
+                        + "\n" + r.output);
             } else if (TOOL_SHELL.equals(tool) || "shell".equals(tool)
                     || "terminal".equals(tool) || "run_shell".equals(tool)) {
                 String command = call.optString("command", call.optString("cmd", ""));
@@ -689,6 +702,8 @@ public final class AgentTools {
                 + "- download_url：{\"url\":\"https://example.com/a.zip\",\"filename\":\"a.zip\"} "
                 + "下载文件；不指定路径时自动放进 attachments，下载物会出现在产物卡和附件里\n"
                 + "- run_python：{\"code\":\"print(1+1)\"} 在设备已有 Python/Termux 时执行；没有则明确报错，不要假装运行\n"
+                + "- server_exec：{\"command\":\"ls -la\",\"cwd\":\"/root\"} 在右上角配置的 SSL/HTTPS 服务器执行；"
+                + "需要先在「配置服务器连接」启用并填好地址与令牌；失败时如实说明，不要假装已执行\n"
                 + "- run_command：{\"command\":\"ls -la\"} 在 Android /system/bin/sh 里执行命令；"
                 + "可传 {\"cwd\":\"...\",\"timeout\":15000}，默认 15 秒、输出最多 64 KB\n"
                 + "规则：路径一律用相对工作目录的路径；不得尝试跳出工作目录；"

@@ -37,6 +37,7 @@ import com.chatyue.app.ui.screen.SettingsPage;
 import com.chatyue.app.ui.screen.TextPreviewPage;
 import com.chatyue.app.ui.screen.WorkspacePage;
 import com.chatyue.app.ui.screen.TerminalPage;
+import com.chatyue.app.ui.screen.ServerPage;
 import com.chatyue.app.ui.m3.M3ChatPage;
 import com.chatyue.app.ui.m3.M3Snackbar;
 import com.chatyue.app.ui.m3.M3HomePage;
@@ -510,6 +511,10 @@ public class MainActivity extends Activity {
 
     public void openTerminal() {
         push(new TerminalPage(this));
+    }
+
+    public void openServerSettings() {
+        push(new ServerPage(this));
     }
 
     public void createFolderHere(final File parent, final Runnable after) {
