@@ -230,6 +230,10 @@ public class M3ChatPage extends Page implements M3InputBar.Listener {
             final M3MessageView view = new M3MessageView(act, m);
             view.setGestureListener(new M3MessageView.GestureListener() {
                 public void onLongPress(M3MessageView v) {
+                    // 兼容旧接口；实际入口是气泡右上角三点。
+                }
+
+                public void onMenu(M3MessageView v) {
                     M3ChatPage.this.onLongPress(v.getMessage());
                 }
 
@@ -910,6 +914,11 @@ public class M3ChatPage extends Page implements M3InputBar.Listener {
     }
 
     // ------------------------------------------------------------ 消息操作
+
+    /** 右上角三点进入管理菜单；消息本体不再绑定长按。 */
+    public void onMenu(final Message msg) {
+        onLongPress(msg);
+    }
 
     public void onLongPress(final Message msg) {
         M3Sheet sheet = new M3Sheet(act).title(msg.isUser() ? "这条消息" : "ChatYUE 的回复");

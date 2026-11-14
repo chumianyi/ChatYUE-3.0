@@ -21,6 +21,7 @@ import com.chatyue.app.ui.md.MdText;
 import com.chatyue.app.ui.widget.ArtifactCard;
 import com.chatyue.app.ui.widget.Avatar;
 import com.chatyue.app.ui.widget.Label;
+import com.chatyue.app.ui.widget.IconButton;
 import com.chatyue.app.ui.widget.PhotoView;
 import com.chatyue.app.ui.widget.RoundBox;
 import com.chatyue.app.ui.widget.ThinkingView;
@@ -46,6 +47,9 @@ public class M3MessageView extends LinearLayout {
     public interface GestureListener {
         void onLongPress(M3MessageView v);
 
+        /** 点击右上角三点：打开管理菜单。 */
+        void onMenu(M3MessageView v);
+
         void onDoubleTap(M3MessageView v);
     }
 
@@ -53,19 +57,9 @@ public class M3MessageView extends LinearLayout {
     private float downX;
     private float downY;
     private boolean moved;
-    private boolean longFired;
     private long lastTapAt;
     private float lastTapX;
     private float lastTapY;
-
-    private final Runnable longPress = new Runnable() {
-        public void run() {
-            if (!moved && !longFired) {
-                longFired = true;
-                if (gestureListener != null) gestureListener.onLongPress(M3MessageView.this);
-            }
-        }
-    };
 
     public void setGestureListener(GestureListener l) {
         gestureListener = l;
@@ -90,19 +84,15 @@ public class M3MessageView extends LinearLayout {
                 downX = ev.getX();
                 downY = ev.getY();
                 moved = false;
-                longFired = false;
-                removeCallbacks(longPress);
-                postDelayed(longPress, 2000);
                 break;
             case MotionEvent.ACTION_MOVE:
-                if (Math.abs(ev.getX() - downX) > Ui.dpf(5) || Math.abs(ev.getY() - downY) > Ui.dpf(5)) {
+                // 只区分“双击复制”和“滑动”，不再用长按触发管理菜单。
+                if (Math.abs(ev.getX() - downX) > Ui.dpf(8) || Math.abs(ev.getY() - downY) > Ui.dpf(8)) {
                     moved = true;
-                    removeCallbacks(longPress);
                 }
                 break;
             case MotionEvent.ACTION_UP:
-                removeCallbacks(longPress);
-                if (!moved && !longFired) {
+                if (!moved) {
                     long now = SystemClock.uptimeMillis();
                     if (lastTapAt > 0 && now - lastTapAt <= 320
                             && Math.abs(ev.getX() - lastTapX) <= Ui.dpf(7)
@@ -117,10 +107,21 @@ public class M3MessageView extends LinearLayout {
                 }
                 break;
             case MotionEvent.ACTION_CANCEL:
-                removeCallbacks(longPress);
+                moved = true;
                 break;
         }
         return false;
+    }
+
+    private IconButton newMenuButton(Context c) {
+        IconButton b = new IconButton(c, com.chatyue.app.core.Icons.MORE_H, 0,
+                M3.ON_SURFACE_3, 26, 15);
+        b.setOnClickListener(new OnClickListener() {
+            public void onClick(View v) {
+                if (gestureListener != null) gestureListener.onMenu(M3MessageView.this);
+            }
+        });
+        return b;
     }
 
     private void buildUser(Context c) {
@@ -171,11 +172,17 @@ public class M3MessageView extends LinearLayout {
         userBubble = new RoundBox(c);
         userBubble.setFill(M3.PRIMARY_CONTAINER);
         userBubble.corners(24, 24, 24, 24);
-        userBubble.setPadding(Ui.dp(14), Ui.dp(10), Ui.dp(14), Ui.dp(10));
+        // 右上角三点浮在气泡里，右侧留白避免压到文字。
+        userBubble.setPadding(Ui.dp(14), Ui.dp(10), Ui.dp(14) + Ui.dp(30), Ui.dp(10));
         userText = new MdText(c, MdInline.build(msg.text, M3.ON_PRIMARY_CONTAINER, M3.PRIMARY_DEEP),
                 Ui.textPaint(M3.ON_PRIMARY_CONTAINER, 14.6f, false), 0, 0, 5f);
         userBubble.addView(userText, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT));
+        FrameLayout.LayoutParams moreLp = new FrameLayout.LayoutParams(
+                Ui.dp(26), Ui.dp(26), Gravity.TOP | Gravity.RIGHT);
+        moreLp.topMargin = Ui.dp(2);
+        moreLp.rightMargin = Ui.dp(2);
+        userBubble.addView(newMenuButton(c), moreLp);
         LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         blp.gravity = Gravity.RIGHT;
@@ -219,6 +226,9 @@ public class M3MessageView extends LinearLayout {
                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         tlp.leftMargin = UiPhoto.gap(c);
         head.addView(time, tlp);
+        View spacer = new View(c);
+        head.addView(spacer, new LinearLayout.LayoutParams(0, 1, 1f));
+        head.addView(newMenuButton(c), new LinearLayout.LayoutParams(Ui.dp(26), Ui.dp(26)));
         LinearLayout.LayoutParams hlp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.FILL_PARENT, UiPhoto.headHeight(c));
         col.addView(head, hlp);
@@ -420,7 +430,6 @@ public class M3MessageView extends LinearLayout {
 
     @Override
     protected void onDetachedFromWindow() {
-        removeCallbacks(longPress);
         super.onDetachedFromWindow();
     }
 
@@ -443,7 +452,7 @@ public class M3MessageView extends LinearLayout {
         }
 
         static int headHeight(Context c) {
-            return com.chatyue.app.core.Ui.dp(24);
+            return com.chatyue.app.core.Ui.dp(28);
         }
 
         static int width(Context c) {

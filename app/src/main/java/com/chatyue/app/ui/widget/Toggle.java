@@ -52,14 +52,18 @@ public class Toggle extends View {
     }
 
     public void setChecked(boolean v, boolean animate) {
-        if (checked == v && animate) return;
-        checked = v;
         float target = v ? 1f : 0f;
+        // 注意：不能在“状态已经等于 v”时直接 return，否则开关会被静默置位，
+        // 但滑块动画/颜色没有刷新，看起来就像没有打开。
         if (!animate) {
+            checked = v;
             anim = target;
+            if (animTween != null) animTween.cancel();
             invalidate();
             return;
         }
+        if (checked == v && Math.abs(anim - target) < 0.01f) return;
+        checked = v;
         if (animTween != null) animTween.cancel();
         animTween = Tween.of(anim, target, 170, new Tween.Listener() {
             public void onUpdate(float value) {
@@ -123,9 +127,11 @@ public class Toggle extends View {
             case MotionEvent.ACTION_UP:
                 press = 0f;
                 if (e.getX() >= 0 && e.getX() <= getWidth() && e.getY() >= 0 && e.getY() <= getHeight()) {
-                    checked = !checked;
-                    setChecked(checked, true);
-                    if (listener != null) listener.onToggle(checked);
+                    // 不要先把 checked 改掉再调用 setChecked：setChecked 会以为
+                    // 状态没变而提前返回，滑块和轨道就不会重绘。
+                    boolean next = !checked;
+                    setChecked(next, true);
+                    if (listener != null) listener.onToggle(next);
                     performClick();
                 }
                 invalidate();

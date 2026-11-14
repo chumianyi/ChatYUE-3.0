@@ -32,6 +32,9 @@ public class Bubble extends ViewGroup {
     public interface Listener {
         void onLongPress(Message m);
 
+        /** 点击气泡右上角三点：打开管理菜单。 */
+        void onMenu(Message m);
+
         void onDoubleTap(Message m);
 
         void onCopyCode(String code);
@@ -66,10 +69,12 @@ public class Bubble extends ViewGroup {
     private final PhotoView photo;
     private final Label footNote;
     private ArtifactCard artifactCard;
+    private final IconButton menu;
 
     private final int padL, padR, padT, padB;
     private final int avatarSize;
     private final int avatarGap;
+    private final int menuSize;
     private final int nameH;
     private final RectF bubbleRect = new RectF();
     private final Paint bubblePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -81,19 +86,9 @@ public class Bubble extends ViewGroup {
     private float downX;
     private float downY;
     private boolean moved;
-    private boolean longFired;
     private long lastTapAt;
     private float lastTapX;
     private float lastTapY;
-
-    private final Runnable longPress = new Runnable() {
-        public void run() {
-            if (!moved && !longFired) {
-                longFired = true;
-                if (listener != null) listener.onLongPress(msg);
-            }
-        }
-    };
 
     public Bubble(Context c, Message m) {
         super(c);
@@ -103,6 +98,7 @@ public class Bubble extends ViewGroup {
         padR = Ui.dp(m.isUser() ? 14 : 13);
         padT = Ui.dp(m.isUser() ? 10 : 11);
         padB = Ui.dp(m.isUser() ? 10 : 11);
+        menuSize = Ui.dp(26);
         avatarSize = Ui.dp(28);
         avatarGap = Ui.dp(9);
         nameH = m.isUser() ? 0 : Ui.dp(16);
@@ -114,8 +110,17 @@ public class Bubble extends ViewGroup {
 
         content = new LinearLayout(c);
         content.setOrientation(LinearLayout.VERTICAL);
-        content.setPadding(padL, padT, padR, padB);
+        // 右上角三点会浮在气泡里，文字右侧留出空间，避免第一行被盖住。
+        content.setPadding(padL, padT, padR + menuSize + Ui.dp(4), padB);
         addView(content);
+
+        menu = new IconButton(c, Icons.MORE_H, 0, Palette.INK_3, 26, 15);
+        menu.setOnClickListener(new OnClickListener() {
+            public void onClick(View v) {
+                if (listener != null) listener.onMenu(msg);
+            }
+        });
+        addView(menu);
 
         taskView = (m.isUser() || (m.agentLog == null || m.agentLog.length() == 0)) ? null
                 : new ThinkingView(c);
@@ -386,6 +391,8 @@ public class Bubble extends ViewGroup {
             avatar.measure(MeasureSpec.makeMeasureSpec(avatarSize, MeasureSpec.EXACTLY),
                     MeasureSpec.makeMeasureSpec(avatarSize, MeasureSpec.EXACTLY));
         }
+        menu.measure(MeasureSpec.makeMeasureSpec(menuSize, MeasureSpec.EXACTLY),
+                MeasureSpec.makeMeasureSpec(menuSize, MeasureSpec.EXACTLY));
         setMeasuredDimension(parentW, nameH + bubbleH + Ui.dp(8));
     }
 
@@ -405,6 +412,10 @@ public class Bubble extends ViewGroup {
             bubbleRect.set(left, nameH, left + bubbleW, nameH + bubbleH);
             content.layout(left, nameH, left + bubbleW, nameH + bubbleH);
         }
+        int mx = (int) (bubbleRect.right) - menuSize - Ui.dp(4);
+        if (mx < (int) bubbleRect.left) mx = (int) bubbleRect.left;
+        int my = (int) bubbleRect.top + Ui.dp(2);
+        menu.layout(mx, my, mx + menuSize, my + menuSize);
     }
 
     @Override
@@ -443,20 +454,15 @@ public class Bubble extends ViewGroup {
                 downX = ev.getX();
                 downY = ev.getY();
                 moved = false;
-                longFired = false;
-                removeCallbacks(longPress);
-                postDelayed(longPress, 2000);
                 break;
             case MotionEvent.ACTION_MOVE:
-                // 2 秒长按必须足够“稳”：手指稍一滑动就取消，避免滑聊天记录时弹菜单。
-                if (Math.abs(ev.getX() - downX) > Ui.dpf(5) || Math.abs(ev.getY() - downY) > Ui.dpf(5)) {
+                // 只用于区分“双击复制”和“滑动”，不再启动任何长按定时器。
+                if (Math.abs(ev.getX() - downX) > Ui.dpf(8) || Math.abs(ev.getY() - downY) > Ui.dpf(8)) {
                     moved = true;
-                    removeCallbacks(longPress);
                 }
                 break;
             case MotionEvent.ACTION_UP:
-                removeCallbacks(longPress);
-                if (!moved && !longFired) {
+                if (!moved) {
                     long now = SystemClock.uptimeMillis();
                     if (lastTapAt > 0 && now - lastTapAt <= 320
                             && Math.abs(ev.getX() - lastTapX) <= Ui.dpf(7)
@@ -471,7 +477,7 @@ public class Bubble extends ViewGroup {
                 }
                 break;
             case MotionEvent.ACTION_CANCEL:
-                removeCallbacks(longPress);
+                moved = true;
                 break;
         }
         return false;
@@ -479,7 +485,6 @@ public class Bubble extends ViewGroup {
 
     @Override
     protected void onDetachedFromWindow() {
-        removeCallbacks(longPress);
         super.onDetachedFromWindow();
     }
 }

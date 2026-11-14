@@ -896,6 +896,11 @@ public class ChatPage extends Page implements InputBar.Listener, Bubble.Listener
 
     // ------------------------------------------------------------ 消息操作
 
+    /** 右上角三点进入管理菜单；消息本体不再绑定长按。 */
+    public void onMenu(Message m) {
+        onLongPress(m);
+    }
+
     public void onLongPress(Message m) {
         final Message msg = m;
         Sheet sheet = new Sheet(act).title(m.isUser() ? "这条消息" : "ChatYUE 的回复");

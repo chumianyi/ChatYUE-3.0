@@ -13,7 +13,7 @@
 > - 三个**默认关闭**的实验性功能（设置或新手引导可开启）：反思、Agent 多轮任务、让 Agent 操控所有文件；
 > - Agent 可创建 / 读取 / 修改 / 删除文件与文件夹，压缩 / 解压 zip，访问网页（open_url）、下载文件（download_url）、执行 shell（run_command）与受限 Python（run_python），结束时用产物卡片展示；
 > - 新增 Android 系统终端（/system/bin/sh），AI 可调用 run_command 执行开发命令；
-> - 消息长按改为 2 秒，双击消息复制文本；经典 M3 修复设置行重叠、时间与删除按钮重叠、气泡形状和输入框提示；
+> - 消息管理改到每条消息右上角的三点按钮，不再依赖长按；双击消息复制文本；经典 M3 修复设置行重叠、时间与删除按钮重叠、气泡形状和输入框提示；修复默认模式胶囊开关点击后不重绘、状态与 UI 不一致；
 > - 任意大小附件导入（流式复制）；HTML 预览支持同目录 CSS/JS；文本 / 代码在线预览；
 > - 全局崩溃错误页（独立进程）：完整日志 + 复制 / 重试 / 返回；
 > - 关于页加入原项目 Muse、本应用开源代码入口与致谢许可证页。
@@ -96,7 +96,7 @@ Muse 使用 **GNU General Public License v3.0**；因此本仓库同样以 **GPL
 | 体积 | 约 2.5 MB（含 8 个 ABI 的 wolfSSL bridge） |
 | DEX | d8 生成，`--min-api 3` |
 | 签名 | v1（JAR, SHA1 摘要）+ v2；Android 1.5–2.3 只认 v1，故必须带 SHA1 |
-| SHA-256 | `d8f9bb0c5994e2240eaf64744fc3833925fbd83ea1376e1a9e340085cd74e24c` |
+| SHA-256 | `eac2d6f807517762644ccb4f33576ec54f36b7ee4cd10a4d76104a9459f70cbd` |
 
 安装时系统会提示“未知来源”，允许即可。签名密钥是仓库内 `keystore/debug.keystore`
 （口令 `android`，仅供调试安装，不要用于正式分发）。
@@ -255,7 +255,7 @@ UI 线程                         工作线程（RequestQueue 单线程串行）
 | `Segmented` | 任务/Agent/群聊 | 滑动胶囊指示器 |
 | `TopBar` | 顶栏 | 返回键 + 双行胶囊标题 + 更多键 |
 | `BounceScrollView` | 滚动容器 | `dispatchDraw` 平移 + 弹簧补间实现边界回弹 |
-| `Bubble` | 消息气泡 | 四角独立圆角、助手侧淡投影、长按判定 |
+| `Bubble` | 消息气泡 | 四角独立圆角、助手侧淡投影、右上角三点管理 |
 | `MarkdownView` / `MdText` / `CodeBox` / `TableBox` | 富文本 | `StaticLayout` 排版 + 自绘代码块（含复制键、横向滚动、限高纵向滚动） |
 | `ThinkingView` | 思考过程卡片 | 可折叠，流式时显示「正在思考…」 |
 | `TypingDots` / `Spinner` | 加载态 | 逐帧 Canvas 动画 |
@@ -267,7 +267,7 @@ UI 线程                         工作线程（RequestQueue 单线程串行）
 * **触摸按压反馈**：每个可点组件都有自己的 `pressed` 插值，不依赖 `state_pressed` drawable。
 * **滚动边界回弹**：`BounceScrollView` 在顶部/底部继续下拉时对画布做阻尼位移，松手弹簧归位。
 * **键盘避让**：`windowSoftInputMode=adjustResize` + `ChatPage.onSizeChanged` 自动把视线拉回最新消息。
-* **长按 / 滑动判定**：`Bubble` / `M3MessageView` 用 2 秒定时 + 5dp 位移阈值区分长按与滚动；双击消息复制文本；
+* **消息手势**：`Bubble` / `M3MessageView` 不再用长按打开管理，管理统一走右上角三点；滑动不触发，双击消息复制文本；
   `CodeBox` / `TableBox` 在横向拖动时 `requestDisallowInterceptTouchEvent(true)`，避免外层滚动抢事件。
 
 ---
@@ -300,7 +300,7 @@ chatUrl() ────┤
 **对话**
 * 多轮上下文（默认带最近 40 条），会话级系统提示词覆盖全局设置
 * 流式逐字输出（40ms 合批）、随时中断、重新生成、失败重试
-* 长按消息 2 秒：复制 / 重新生成 / 编辑后重发 / 删除；双击消息复制文本
+* 消息右上角三点：复制 / 重新生成 / 编辑后重发 / 删除 / 收藏；双击消息复制文本
 * 快捷条：复制 / 重生成 / 导出 Markdown / 清空
 * 思考过程卡片（解析 `reasoning_content`，可折叠）
 
@@ -337,7 +337,7 @@ chatUrl() ────┤
 | 引导 | `OnboardingPage` | 8 步：欢迎 / 语言 / 称呼 / 记忆 / 模型 / 隐私 / 主题 / 准备就绪；2.2 已移除前面的开屏动画 |
 | 经典主题 | `ui/m3/*` | 与默认页面完全独立的 Material 3 页面：首页 / 会话 / 知识 / 收藏 / 设置 / 外观 / 聊天 / 看图 / 模型编辑 |
 | 首页 | `HomePage` | 问候、最近会话、快捷提问、Agent 入口 |
-| 对话 | `ChatPage` | 流式逐字、Markdown、代码高亮与复制、图片、长按操作 |
+| 对话 | `ChatPage` | 流式逐字、Markdown、代码高亮与复制、图片、右上角三点管理 |
 | 会话 | `SessionListPage` / `SessionDetailPage` | 列表、重命名、导出、清空、删除 |
 | 搜索 | `SearchPage` | 标题 + 正文全局搜索，结果直达原会话 |
 | 看图 | `ImagePreviewPage` | 全屏、可缩放、保存到相册 |
